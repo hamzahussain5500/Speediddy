@@ -17,26 +17,31 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 # ── path setup ────────────────────────────────────────────────────────────────
 WS_ROOT = Path(__file__).resolve().parent
 SRC_DIR = WS_ROOT / "src" / "racing_analyzer"
+PIPELINE_SCRIPT = WS_ROOT / "minimal_raceline_project" / "run_raceline_pipeline.py"
+TRACK_UPLOAD_DIR = WS_ROOT / "uploads" / "tracks"
+TRACK_JOBS_DIR = WS_ROOT / "uploads" / "track_jobs"
 sys.path.insert(0, str(SRC_DIR))
 
-from app.core.geometry import Raceline, arc_length, series_stats
+from app.core.geometry import Raceline, series_stats
 from app.core.loaders import build_raceline, build_boundaries
-from app.core.corner_detection import detect_corners
+from app.core.corner_detection import CornerSegment, detect_corners
 from app.core.recommendations import generate_recommendations
 from app.models.inputs import BoundaryData, Point2D, RacelinePoint
 from app.models.outputs import CornerResult
@@ -59,9 +64,32 @@ def load_raceline(raceline_type: str = "hybrid") -> Raceline:
     ]
     return build_raceline(points)
 
+def load_raceline_from_json_payload(path: Path) -> Raceline:
+    with open(path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
 
-def load_boundaries():
-    path = WS_ROOT / "yas_marina_bnd.json"
+    required = ["s", "x", "y", "psi", "kappa", "vx", "ax"]
+    if any(k not in payload for k in required):
+        raise ValueError(f"Invalid raceline JSON payload: expected keys {required}")
+
+    n = len(payload["s"])
+    points = [
+        RacelinePoint(
+            s=float(payload["s"][i]),
+            x=float(payload["x"][i]),
+            y=float(payload["y"][i]),
+            psi=float(payload["psi"][i]),
+            kappa=float(payload["kappa"][i]),
+            vx=float(payload["vx"][i]),
+            ax=float(payload["ax"][i]),
+        )
+        for i in range(n)
+    ]
+    return build_raceline(points)
+
+
+def load_boundaries(path: Optional[Path] = None):
+    path = path or (WS_ROOT / "yas_marina_bnd.json")
     with open(path) as f:
         data = json.load(f)
     bd = BoundaryData(
@@ -82,35 +110,233 @@ def read_bag(mcap_path: Path):
     for m in read_ros2_messages(str(mcap_path), topics=["/constructor0/state_estimation"]):
         r = m.ros_msg
         rows.append((m.log_time.timestamp(), r.x_m, r.y_m, r.yaw_rad, r.v_mps))
+    if not rows:
+        raise RuntimeError(f"No /constructor0/state_estimation messages found in {mcap_path}")
     arr = np.array(rows, dtype=float)
     return arr[:, 0], arr[:, 1], arr[:, 2], arr[:, 3], arr[:, 4]
+
+
+def _build_default_optimum_from_raceline(raceline: Raceline) -> dict:
+    segs = detect_corners(raceline)
+    corners = []
+    for seg in segs:
+        corners.append(
+            {
+                "turn_id": f"T{seg.id + 1}",
+                "category": seg.corner_type,
+                "x_apex": float(raceline.x[seg.apex_idx]),
+                "y_apex": float(raceline.y[seg.apex_idx]),
+                "vx_apex_mps": float(raceline.vx[seg.apex_idx]),
+                "apex_s": float(seg.apex_s),
+                "direction": seg.turn_direction,
+                "length_m": float(seg.length_m),
+            }
+        )
+    return {
+        "properties": {
+            "source": "computed_from_active_raceline",
+            "corner_count": len(corners),
+        },
+        "corners": corners,
+        "recommendations": [],
+    }
+
+def _segments_from_optimum(raceline: Raceline, optimum: dict) -> list[CornerSegment]:
+    corners = optimum.get("corners", [])
+    out: list[CornerSegment] = []
+
+    category_map = {
+        "HAIRPIN": "hairpin",
+        "NINETY": "medium",
+        "SIMPLE": "fast",
+        "DOUBLE_APEX": "chicane",
+        "CHICANE": "chicane",
+    }
+
+    n = raceline.n_points
+    for i, c in enumerate(corners):
+        idx_range = c.get("index_range")
+        if isinstance(idx_range, list) and len(idx_range) == 2:
+            start_idx = int(max(0, min(n - 1, idx_range[0])))
+            end_idx = int(max(0, min(n - 1, idx_range[1])))
+            if end_idx < start_idx:
+                start_idx, end_idx = end_idx, start_idx
+            apex_idx = int(np.clip((start_idx + end_idx) // 2, 0, n - 1))
+        else:
+            apex_s = float(c.get("s_apex", c.get("apex_s", 0.0)))
+            apex_idx = int(np.argmin(np.abs(raceline.s - apex_s)))
+            start_idx = int(np.clip(apex_idx - 20, 0, n - 1))
+            end_idx = int(np.clip(apex_idx + 20, 0, n - 1))
+
+        seg_kappa = raceline.kappa[start_idx : end_idx + 1]
+        if seg_kappa.size == 0:
+            continue
+
+        mean_signed = float(np.mean(seg_kappa))
+        if mean_signed > 0:
+            turn_dir = "left"
+        elif mean_signed < 0:
+            turn_dir = "right"
+        else:
+            turn_dir = "unknown"
+
+        category_raw = str(c.get("category", "")).upper()
+        corner_type = category_map.get(category_raw, "medium")
+
+        out.append(
+            CornerSegment(
+                id=i,
+                start_idx=start_idx,
+                end_idx=end_idx,
+                apex_idx=apex_idx,
+                start_s=float(raceline.s[start_idx]),
+                end_s=float(raceline.s[end_idx]),
+                apex_s=float(raceline.s[apex_idx]),
+                length_m=float(max(0.0, raceline.s[end_idx] - raceline.s[start_idx])),
+                max_curvature=float(np.max(np.abs(seg_kappa))),
+                mean_curvature=float(np.mean(np.abs(seg_kappa))),
+                turn_direction=turn_dir,
+                corner_type=corner_type,
+            )
+        )
+
+    return out
+
+
+def _corner_reference_from_optimum(optimum: dict) -> list[dict]:
+    ref = []
+    for i, c in enumerate(optimum.get("corners", [])):
+        ref.append(
+            {
+                "id": i,
+                "turn_id": c.get("turn_id", f"T{i + 1}"),
+                "category": c.get("category", ""),
+                "label": c.get("label", f"Corner {i + 1}"),
+                "s_apex": float(c.get("s_apex", c.get("apex_s", 0.0))),
+                "x_apex": c.get("x_apex"),
+                "y_apex": c.get("y_apex"),
+                "segment_xy": c.get("segment_xy", []),
+                "index_range": c.get("index_range", []),
+            }
+        )
+    return ref
+
+
+def _build_corner_markers(optimum: dict, raceline: Raceline) -> list[dict]:
+    markers = []
+    for c in optimum.get("corners", []):
+        if "x_apex" in c and "y_apex" in c:
+            x_apex = c["x_apex"]
+            y_apex = c["y_apex"]
+            vx_apex = c.get("vx_apex_mps", 0.0)
+            label = c.get("turn_id", c.get("label", "corner"))
+            category = c.get("category", c.get("corner_type", ""))
+        else:
+            # fallback: if corner JSON is minimal, project by apex_s
+            apex_s = float(c.get("s_apex", c.get("apex_s", 0.0)))
+            apex_idx = int(np.argmin(np.abs(raceline.s - apex_s)))
+            x_apex = float(raceline.x[apex_idx])
+            y_apex = float(raceline.y[apex_idx])
+            vx_apex = float(raceline.vx[apex_idx])
+            label = c.get("turn_id", f"T{len(markers) + 1}")
+            category = c.get("category", "")
+
+        markers.append(
+            {
+                "x": round(float(x_apex), 2),
+                "y": round(float(y_apex), 2),
+                "label": str(label),
+                "category": str(category),
+                "vx_apex_kmh": round(float(vx_apex) * 3.6, 1),
+            }
+        )
+    return markers
+
+
+def _prepare_live_cache(
+    raceline: Raceline,
+    bag_path: Path,
+    boundaries_path: Path,
+    optimum: Optional[dict],
+    speed_multiplier: float,
+    source_track_name: str,
+) -> dict:
+    timestamps, xs, ys, yaws, vxs = read_bag(bag_path)
+
+    idxs, distances, lat_devs, hdg_errs, spd_errs = _compute_per_point_metrics(
+        raceline, xs, ys, yaws, vxs
+    )
+    ref_s = raceline.s[idxs]
+
+    seg = np.sqrt(np.diff(xs) ** 2 + np.diff(ys) ** 2)
+    cum_path_m = np.concatenate(([0.0], np.cumsum(seg)))
+
+    left_bnd, right_bnd = load_boundaries(boundaries_path)
+    rl_xy = [{"x": round(float(x), 2), "y": round(float(y), 2)} for x, y in zip(raceline.x, raceline.y)]
+    lb_xy = [{"x": round(float(p[0]), 2), "y": round(float(p[1]), 2)} for p in left_bnd]
+    rb_xy = [{"x": round(float(p[0]), 2), "y": round(float(p[1]), 2)} for p in right_bnd]
+
+    optimum = optimum or _build_default_optimum_from_raceline(raceline)
+    corner_segs = _segments_from_optimum(raceline, optimum)
+    if not corner_segs:
+      corner_segs = detect_corners(raceline)
+    corner_reference = _corner_reference_from_optimum(optimum)
+    corner_markers = _build_corner_markers(optimum, raceline)
+
+    return {
+        "raceline": raceline,
+        "bag_path": str(bag_path),
+        "bag_name": bag_path.name,
+        "boundaries_path": str(boundaries_path),
+        "source_track_name": source_track_name,
+        "speed_multiplier": speed_multiplier,
+      "timestamps": timestamps,
+      "xs": xs,
+      "ys": ys,
+      "yaws": yaws,
+      "vxs": vxs,
+      "idxs": idxs,
+      "distances": distances,
+      "lat_devs": lat_devs,
+      "hdg_errs": hdg_errs,
+      "spd_errs": spd_errs,
+      "ref_s": ref_s,
+      "cum_path_m": cum_path_m,
+      "corner_segs": corner_segs,
+      "corner_reference": corner_reference,
+      "raceline_xy": rl_xy,
+      "left_bnd": lb_xy,
+      "right_bnd": rb_xy,
+      "corner_markers": corner_markers,
+      "optimum": optimum,
+    }
 
 
 # ── analysis snapshot ─────────────────────────────────────────────────────────
 
 def build_snapshot(
     frame_idx: int,
-    timestamps: np.ndarray,
-    xs: np.ndarray,
-    ys: np.ndarray,
-    yaws: np.ndarray,
-    vxs: np.ndarray,
-    raceline: Raceline,
+    live: dict,
     optimum: dict,
 ) -> dict:
     """
     Analyse trajectory up to frame_idx and return a structured JSON snapshot.
     """
-    tx = xs[: frame_idx + 1]
-    ty = ys[: frame_idx + 1]
-    tyaw = yaws[: frame_idx + 1]
-    tvx = vxs[: frame_idx + 1]
+    t0 = time.perf_counter()
 
-    idxs, distances, lat_devs, hdg_errs, spd_errs = _compute_per_point_metrics(
-        raceline, tx, ty, tyaw, tvx
-    )
-    ref_s = raceline.s[idxs]
-    corner_segs = detect_corners(raceline)
+    timestamps = live["timestamps"]
+    tx = live["xs"][: frame_idx + 1]
+    ty = live["ys"][: frame_idx + 1]
+    tvx = live["vxs"][: frame_idx + 1]
+    idxs = live["idxs"][: frame_idx + 1]
+    distances = live["distances"][: frame_idx + 1]
+    lat_devs = live["lat_devs"][: frame_idx + 1]
+    hdg_errs = live["hdg_errs"][: frame_idx + 1]
+    spd_errs = live["spd_errs"][: frame_idx + 1]
+    ref_s = live["ref_s"][: frame_idx + 1]
+    raceline = live["raceline"]
+    corner_segs = live["corner_segs"]
+
     corners: list[CornerResult] = [
         _build_corner_result(seg, raceline, ref_s, lat_devs, spd_errs, idxs, tvx)
         for seg in corner_segs
@@ -154,17 +380,23 @@ def build_snapshot(
             "rms_deg": round(float(np.degrees(hdg_st["rms"])), 3),
             "max_abs_deg": round(float(np.degrees(hdg_st["max_abs"])), 3),
         },
-        "path_length_m": round(float(arc_length(tx, ty)), 2),
+        "path_length_m": round(float(live["cum_path_m"][frame_idx]), 2),
         "points_analysed": len(tx),
     }
 
     # Corner analysis (only covered corners)
+    corner_ref_map = {
+        int(c.get("id", i)): c for i, c in enumerate(live.get("corner_reference", []))
+    }
     corners_out = []
     for c in corners:
+        cref = corner_ref_map.get(c.id, {})
+        corner_label = str(cref.get("turn_id", c.label))
+        corner_type = str(cref.get("category", c.corner_type)).lower()
         co = {
             "id": c.id + 1,
-            "label": c.label,
-            "type": c.corner_type,
+            "label": corner_label,
+            "type": corner_type,
             "direction": c.turn_direction,
             "apex_s_m": c.apex_s,
             "severity_score": c.severity_score,
@@ -193,7 +425,7 @@ def build_snapshot(
     recs_out = [
         {
             "corner_id": r.corner_id + 1,
-            "corner_label": r.corner_label,
+        "corner_label": str(corner_ref_map.get(r.corner_id, {}).get("turn_id", r.corner_label)),
             "issue_type": r.issue_type,
             "priority": r.coaching_priority,
             "confidence": round(r.confidence, 2),
@@ -213,14 +445,19 @@ def build_snapshot(
     step = max(1, len(tx) // 500)
     traj_xy = [{"x": round(float(tx[i]), 2), "y": round(float(ty[i]), 2)} for i in range(0, len(tx), step)]
 
+    compute_ms = (time.perf_counter() - t0) * 1000.0
+
     return {
         "schema_version": 1,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "source": {
             "bag": "",   # filled by caller
-            "raceline": "hybrid",
+        "raceline": live.get("source_track_name", "hybrid"),
             "optimum_json": "yas_marina_bnd_hybrid_corner_analysis.json",
         },
+      "analytics_perf": {
+        "snapshot_compute_ms": round(compute_ms, 3),
+      },
         "current_state": current,
         "running_metrics": metrics,
         "corners": corners_out,
@@ -240,64 +477,40 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 # Shared state (loaded once at startup)
 _state: dict = {}
+_jobs: dict[str, dict] = {}
 
 
 @app.on_event("startup")
 async def _startup():
     global _state
+    TRACK_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    TRACK_JOBS_DIR.mkdir(parents=True, exist_ok=True)
+
     args = _state.get("args", {})
     bag_name = args.get("bag", "hackathon_wheel_to_wheel.mcap")
     bag_override = args.get("bag_override")
     bag_path = Path(bag_override) if bag_override else WS_ROOT / bag_name
-    raceline_type = args.get("raceline", "hybrid")
-    optimum_path = WS_ROOT / "outputs" / "yas_marina_bnd_hybrid_corner_analysis.json"
-
-    print(f"  Loading raceline ({raceline_type})...", end=" ", flush=True)
-    raceline = load_raceline(raceline_type)
-    print(f"done — {raceline.n_points} pts, {raceline.total_length:.0f} m")
-
-    print(f"  Loading boundaries...", end=" ", flush=True)
-    left_bnd, right_bnd = load_boundaries()
-    print("done")
-
-    print(f"  Loading optimum JSON...", end=" ", flush=True)
-    optimum = load_optimum_json(optimum_path)
-    print("done")
-
-    print(f"  Reading bag: {bag_path.name}...", end=" ", flush=True)
     if not bag_path.exists():
         print(f"\nERROR: {bag_path} not found.")
         sys.exit(1)
-    timestamps, xs, ys, yaws, vxs = read_bag(bag_path)
-    print(f"done — {len(timestamps)} msgs, {timestamps[-1]-timestamps[0]:.0f} s")
 
-    # Build raceline/boundary geometry for dashboard (send once)
-    rl_xy = [{"x": round(float(x), 2), "y": round(float(y), 2)}
-             for x, y in zip(raceline.x, raceline.y)]
-    lb_xy = [{"x": round(float(p[0]), 2), "y": round(float(p[1]), 2)} for p in left_bnd]
-    rb_xy = [{"x": round(float(p[0]), 2), "y": round(float(p[1]), 2)} for p in right_bnd]
-
-    # Corner apex markers from optimum JSON
-    corner_markers = [
-        {"x": round(c["x_apex"], 2), "y": round(c["y_apex"], 2),
-         "label": c["turn_id"], "category": c["category"],
-         "vx_apex_kmh": round(c["vx_apex_mps"] * 3.6, 1)}
-        for c in optimum.get("corners", [])
-    ]
-
-    _state.update({
-        "raceline": raceline,
-        "left_bnd": lb_xy,
-        "right_bnd": rb_xy,
-        "raceline_xy": rl_xy,
-        "corner_markers": corner_markers,
-        "optimum": optimum,
-        "timestamps": timestamps,
-        "xs": xs, "ys": ys, "yaws": yaws, "vxs": vxs,
+    _state.update(
+      {
+        "bag_path": str(bag_path),
         "bag_name": bag_path.name,
-        "speed_multiplier": args.get("speed", 5.0),
-    })
-    print("  Dashboard ready — open http://localhost:8050")
+        "speed_multiplier": float(args.get("speed", 5.0)),
+        "track_ready": False,
+        "source_track_name": None,
+        "raceline_xy": [],
+        "left_bnd": [],
+        "right_bnd": [],
+        "corner_markers": [],
+        "segmented_curves": [],
+        "optimum": {"properties": {}, "corners": [], "recommendations": []},
+      }
+    )
+    port = int(args.get("port", 8050))
+    print(f"  Dashboard ready — upload track first at http://localhost:{port}")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -307,15 +520,240 @@ async def index():
 
 @app.get("/static-data")
 async def static_data():
-    """Return track geometry (sent once at page load)."""
+  """Return track geometry (sent once at page load)."""
+  if not _state.get("track_ready", False):
     return {
-        "raceline": _state["raceline_xy"],
-        "left_boundary": _state["left_bnd"],
-        "right_boundary": _state["right_bnd"],
-        "corner_markers": _state["corner_markers"],
-        "track_length_m": round(_state["raceline"].total_length, 2),
-        "bag_name": _state["bag_name"],
-        "optimum_properties": _state["optimum"].get("properties", {}),
+      "setup_required": True,
+      "bag_name": _state.get("bag_name", ""),
+      "active_track": None,
+      "raceline": [],
+      "left_boundary": [],
+      "right_boundary": [],
+      "corner_markers": [],
+      "corner_reference": [],
+      "segmented_curves": [],
+      "track_length_m": 0.0,
+      "optimum_properties": {},
+    }
+
+  return {
+    "setup_required": False,
+    "raceline": _state["raceline_xy"],
+    "left_boundary": _state["left_bnd"],
+    "right_boundary": _state["right_bnd"],
+    "corner_markers": _state["corner_markers"],
+    "corner_reference": _state.get("corner_reference", []),
+    "segmented_curves": _state.get("segmented_curves", []),
+    "track_length_m": round(_state["raceline"].total_length, 2),
+    "bag_name": _state["bag_name"],
+    "active_track": _state.get("source_track_name"),
+    "optimum_properties": _state["optimum"].get("properties", {}),
+  }
+
+
+async def _run_track_pipeline_job(job_id: str) -> None:
+  job = _jobs[job_id]
+  job["status"] = "running"
+  job["started_at"] = datetime.now(timezone.utc).isoformat()
+
+  input_path = Path(job["input_path"])
+  out_dir = Path(job["output_dir"])
+  out_dir.mkdir(parents=True, exist_ok=True)
+
+  cmd = [
+    sys.executable,
+    str(PIPELINE_SCRIPT),
+    "--track-json",
+    str(input_path),
+    "--output-dir",
+    str(out_dir),
+    "--json-indent",
+    "2",
+  ]
+
+  try:
+    proc = await asyncio.create_subprocess_exec(
+      *cmd,
+      stdout=asyncio.subprocess.PIPE,
+      stderr=asyncio.subprocess.PIPE,
+      cwd=str(WS_ROOT),
+      env=os.environ.copy(),
+    )
+    stdout_b, stderr_b = await proc.communicate()
+    stdout = stdout_b.decode("utf-8", errors="replace")
+    stderr = stderr_b.decode("utf-8", errors="replace")
+
+    if proc.returncode != 0:
+      job["status"] = "failed"
+      job["error"] = f"Pipeline failed with exit code {proc.returncode}"
+      job["stderr_tail"] = "\n".join(stderr.splitlines()[-30:])
+      job["stdout_tail"] = "\n".join(stdout.splitlines()[-30:])
+      job["finished_at"] = datetime.now(timezone.utc).isoformat()
+      return
+
+    hybrid_json = out_dir / "raceline_hybrid.json"
+    bundle_json = out_dir / "trajectories_bundle.json"
+    if not hybrid_json.exists() or not bundle_json.exists():
+      job["status"] = "failed"
+      job["error"] = "Pipeline completed but expected JSON outputs are missing"
+      job["finished_at"] = datetime.now(timezone.utc).isoformat()
+      return
+
+    raceline = load_raceline_from_json_payload(hybrid_json)
+    segs = detect_corners(raceline)
+    segmented = [
+      {
+        "id": seg.id + 1,
+        "label": f"Corner {seg.id + 1}",
+        "type": seg.corner_type,
+        "direction": seg.turn_direction,
+        "start_s": round(float(seg.start_s), 3),
+        "end_s": round(float(seg.end_s), 3),
+        "apex_s": round(float(seg.apex_s), 3),
+        "length_m": round(float(seg.length_m), 3),
+        "max_curvature": round(float(seg.max_curvature), 6),
+      }
+      for seg in segs
+    ]
+
+    with open(bundle_json, "r", encoding="utf-8") as f:
+      bundle_payload = json.load(f)
+
+    job["status"] = "succeeded"
+    job["result"] = {
+      "optimum_trajectory": {
+        "hybrid_raceline_json": str(hybrid_json),
+        "bundle_json": str(bundle_json),
+        "n_points": int(raceline.n_points),
+        "track_length_m": round(float(raceline.total_length), 3),
+      },
+      "segmented_curves": segmented,
+      "bundle_preview": {
+        "schema_version": bundle_payload.get("schema_version"),
+        "source_track_json": bundle_payload.get("source_track_json"),
+        "settings": bundle_payload.get("settings", {}),
+      },
+    }
+    job["stdout_tail"] = "\n".join(stdout.splitlines()[-20:])
+    job["finished_at"] = datetime.now(timezone.utc).isoformat()
+  except Exception as exc:
+    job["status"] = "failed"
+    job["error"] = str(exc)
+    job["finished_at"] = datetime.now(timezone.utc).isoformat()
+
+
+@app.post("/api/upload-track")
+async def upload_track_json(file: UploadFile = File(...)):
+  if not file.filename:
+    raise HTTPException(status_code=400, detail="Missing file name")
+  if not file.filename.lower().endswith(".json"):
+    raise HTTPException(status_code=400, detail="Only .json files are supported")
+
+  content = await file.read()
+  if len(content) > 8 * 1024 * 1024:
+    raise HTTPException(status_code=400, detail="Track JSON must be <= 8 MB")
+
+  try:
+    payload = json.loads(content.decode("utf-8"))
+  except Exception:
+    raise HTTPException(status_code=400, detail="Invalid JSON file")
+
+  b = payload.get("boundaries", {})
+  if not isinstance(b.get("left_border"), list) or not isinstance(b.get("right_border"), list):
+    raise HTTPException(status_code=400, detail="JSON must include boundaries.left_border/right_border arrays")
+
+  job_id = uuid.uuid4().hex[:12]
+  job_dir = TRACK_JOBS_DIR / job_id
+  input_path = TRACK_UPLOAD_DIR / f"{job_id}_{Path(file.filename).name}"
+  output_dir = job_dir / "outputs"
+
+  TRACK_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+  job_dir.mkdir(parents=True, exist_ok=True)
+
+  with open(input_path, "wb") as f:
+    f.write(content)
+
+  _jobs[job_id] = {
+    "job_id": job_id,
+    "status": "queued",
+    "created_at": datetime.now(timezone.utc).isoformat(),
+    "input_filename": file.filename,
+    "input_path": str(input_path),
+    "output_dir": str(output_dir),
+    "error": None,
+    "result": None,
+  }
+
+  asyncio.create_task(_run_track_pipeline_job(job_id))
+
+  return {
+    "job_id": job_id,
+    "status": "queued",
+    "message": "Track uploaded. Raceline pipeline started.",
+    "status_endpoint": f"/api/jobs/{job_id}",
+    "activate_endpoint": f"/api/jobs/{job_id}/activate",
+  }
+
+
+@app.get("/api/jobs")
+async def list_track_jobs():
+  jobs = sorted(_jobs.values(), key=lambda j: j.get("created_at", ""), reverse=True)
+  return {"count": len(jobs), "jobs": jobs[:20]}
+
+
+@app.get("/api/jobs/{job_id}")
+async def get_track_job(job_id: str):
+  job = _jobs.get(job_id)
+  if not job:
+    raise HTTPException(status_code=404, detail="Job not found")
+  return job
+
+
+@app.post("/api/jobs/{job_id}/activate")
+async def activate_track_job(job_id: str):
+    job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.get("status") != "succeeded":
+        raise HTTPException(status_code=409, detail="Job is not completed successfully")
+
+    out_dir = Path(job["output_dir"])
+    hybrid_json = out_dir / "raceline_hybrid.json"
+    input_json = Path(job["input_path"])
+    if not hybrid_json.exists():
+        raise HTTPException(status_code=404, detail="hybrid raceline output missing")
+
+    try:
+        raceline = load_raceline_from_json_payload(hybrid_json)
+        ref_optimum_path = WS_ROOT / "outputs" / "yas_marina_bnd_hybrid_corner_analysis.json"
+        filename = str(job.get("input_filename", "")).lower()
+        if "yas" in filename and ref_optimum_path.exists():
+            optimum = load_optimum_json(ref_optimum_path)
+        else:
+            optimum = _build_default_optimum_from_raceline(raceline)
+
+        live = _prepare_live_cache(
+            raceline=raceline,
+            bag_path=Path(_state["bag_path"]),
+            boundaries_path=input_json,
+            optimum=optimum,
+            speed_multiplier=float(_state.get("speed_multiplier", 5.0)),
+            source_track_name=f"uploaded:{job.get('input_filename', job_id)}",
+        )
+        live["track_ready"] = True
+        live["segmented_curves"] = job.get("result", {}).get("segmented_curves", [])
+        _state.update(live)
+        job["activated"] = True
+        job["activated_at"] = datetime.now(timezone.utc).isoformat()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to activate uploaded track: {exc}")
+
+    return {
+        "status": "ok",
+        "job_id": job_id,
+        "active_track": _state.get("source_track_name"),
+        "track_length_m": round(_state["raceline"].total_length, 3),
+        "corner_count": len(_state.get("corner_segs", [])),
     }
 
 
@@ -323,27 +761,30 @@ async def static_data():
 async def stream(ws: WebSocket):
     """Stream analysis snapshots frame-by-frame over WebSocket."""
     await ws.accept()
+    if not _state.get("track_ready", False):
+        await ws.send_json(
+            {
+                "type": "error",
+                "message": "Track setup required: upload track JSON and wait for raceline pipeline before starting live stream.",
+            }
+        )
+        await ws.close()
+        return
+
     timestamps = _state["timestamps"]
-    xs = _state["xs"]
-    ys = _state["ys"]
-    yaws = _state["yaws"]
-    vxs = _state["vxs"]
-    raceline = _state["raceline"]
     optimum = _state["optimum"]
     bag_name = _state["bag_name"]
-    speed_mult = _state["speed_multiplier"]
+    speed_mult = float(_state.get("speed_multiplier", 5.0))
 
     n = len(timestamps)
-    # Adaptive frame step: aim for ~20 fps of analysis frames
-    # Analysis every K data points
-    analysis_step = max(1, n // 2000)
+    # Adaptive frame step: cap snapshots to ~1200 frames for lighter browser load
+    analysis_step = max(1, n // 1200)
 
     try:
         # Send ready signal
         await ws.send_json({"type": "ready", "total_frames": n, "analysis_step": analysis_step})
 
         frame_idx = 0
-        last_send_ts = time.monotonic()
 
         while frame_idx < n:
             # Compute inter-frame delay based on real timestamps / speed multiplier
@@ -356,7 +797,7 @@ async def stream(ws: WebSocket):
             await asyncio.sleep(sleep_dt)
 
             snap = build_snapshot(
-                frame_idx, timestamps, xs, ys, yaws, vxs, raceline, optimum
+                frame_idx, _state, optimum
             )
             snap["source"]["bag"] = bag_name
             snap["type"] = "snapshot"
@@ -389,13 +830,13 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0d0d0d; color: #e0e0e0; font-family: 'Courier New', monospace; font-size: 13px; }
+  body { background: #0a0b10; color: #e8e8ec; font-family: Inter, 'Segoe UI', Roboto, sans-serif; font-size: 13px; }
 
   #header {
     background: #111; border-bottom: 1px solid #222;
     padding: 8px 16px; display: flex; align-items: center; gap: 16px;
   }
-  #header h1 { font-size: 16px; color: #f0c040; letter-spacing: 1px; }
+  #header h1 { font-size: 16px; color: #f0c040; letter-spacing: 1px; font-weight: 700; }
   #status-badge {
     padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: bold;
     background: #333; color: #aaa;
@@ -403,6 +844,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   #status-badge.live { background: #1a4a1a; color: #4caf50; }
   #status-badge.done { background: #1a1a4a; color: #64b5f6; }
   #bag-label { color: #aaa; font-size: 11px; }
+  #active-track-label { color: #89c2ff; font-size: 11px; }
 
   #main { display: grid; grid-template-columns: 1fr 420px; height: calc(100vh - 42px); }
 
@@ -412,12 +854,12 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 
   /* Metric bar below map */
   #metric-bar {
-    display: grid; grid-template-columns: repeat(6, 1fr);
+    display: grid; grid-template-columns: repeat(8, 1fr);
     gap: 6px; padding: 6px 0;
   }
   .metric-card {
     background: #181818; border: 1px solid #2a2a2a; border-radius: 4px;
-    padding: 6px 8px; text-align: center;
+    padding: 7px 8px; text-align: center;
   }
   .metric-card .label { font-size: 10px; color: #888; text-transform: uppercase; }
   .metric-card .value { font-size: 18px; font-weight: bold; color: #f0c040; margin-top: 2px; }
@@ -483,6 +925,40 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   .corner-grid .v { color: #e0e0e0; }
   .no-data { color: #555; font-style: italic; text-align: center; padding: 20px; }
 
+  .builder-panel {
+    background: #13141d;
+    border: 1px solid #23263a;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .builder-title { font-size: 12px; color: #9ecbff; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .builder-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .builder-input {
+    background: #0f1017; border: 1px solid #2a2d42; color: #d5d8e3; border-radius: 6px;
+    padding: 8px; font-size: 12px; min-width: 220px;
+  }
+  .btn {
+    border: 1px solid #2f3550; background: #181b2a; color: #d5d8e3;
+    border-radius: 6px; padding: 8px 10px; font-size: 12px; cursor: pointer;
+  }
+  .btn.primary { border-color: #f0c040; color: #f0c040; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .builder-msg { margin-top: 8px; color: #9aa0b7; font-size: 12px; }
+  .job-card {
+    background: #10121a;
+    border: 1px solid #22283d;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .job-head { display:flex; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .pill { font-size: 10px; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; }
+  .pill.queued { background:#2c2f40; color:#c0c6e0; }
+  .pill.running { background:#2e3d5e; color:#9ecbff; }
+  .pill.succeeded { background:#24422f; color:#7de2a8; }
+  .pill.failed { background:#4a2024; color:#ff9a9a; }
+
   /* Speed chart */
   #speed-chart { height: 220px; }
   #dev-chart { height: 220px; }
@@ -501,6 +977,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   <h1>RACING ANALYZER</h1>
   <span id="status-badge">CONNECTING</span>
   <span id="bag-label">—</span>
+  <span id="active-track-label">track: hybrid</span>
   <span style="margin-left:auto; color:#555; font-size:11px;" id="timestamp-label"></span>
 </div>
 
@@ -540,17 +1017,28 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
         <div class="value" id="m-pts">—</div>
         <div class="unit">analysed</div>
       </div>
+      <div class="metric-card">
+        <div class="label">Snapshot</div>
+        <div class="value" id="m-compute">—</div>
+        <div class="unit">ms</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Recs</div>
+        <div class="value" id="m-recs">—</div>
+        <div class="unit">active</div>
+      </div>
     </div>
   </div>
 
   <div id="right-panel">
     <div class="panel-tabs">
-      <button class="tab-btn active" onclick="switchTab('recs')">Recommendations</button>
+      <button class="tab-btn" onclick="switchTab('recs')">Recommendations</button>
       <button class="tab-btn" onclick="switchTab('corners')">Corners</button>
       <button class="tab-btn" onclick="switchTab('charts')">Charts</button>
+      <button class="tab-btn active" onclick="switchTab('track')">Track Setup</button>
       <button class="tab-btn" onclick="switchTab('json')">JSON</button>
     </div>
-    <div id="tab-recs" class="tab-content active">
+    <div id="tab-recs" class="tab-content">
       <div id="recs-container"><p class="no-data">Waiting for data…</p></div>
     </div>
     <div id="tab-corners" class="tab-content">
@@ -559,6 +1047,31 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     <div id="tab-charts" class="tab-content">
       <div id="speed-chart"></div>
       <div id="dev-chart"></div>
+    </div>
+    <div id="tab-track" class="tab-content active">
+      <div class="builder-panel">
+        <div class="builder-title">Step 1 — Upload track JSON</div>
+        <div class="builder-row">
+          <input id="track-file" class="builder-input" type="file" accept=".json,application/json" />
+          <button id="track-upload-btn" class="btn primary" onclick="uploadTrackJson()">Run pipeline</button>
+        </div>
+        <div class="builder-msg" id="track-upload-msg">Upload a track boundary JSON to generate optimum raceline and segmented curves.</div>
+      </div>
+      <div class="builder-panel">
+        <div class="builder-title">Step 2 — Start live bag analysis</div>
+        <div class="builder-row">
+          <button id="live-start-btn" class="btn primary" onclick="startLivePlayback()" disabled>Start live dashboard</button>
+        </div>
+        <div class="builder-msg" id="live-start-msg">Complete Step 1 first. The stream starts only after a track is processed and activated.</div>
+      </div>
+      <div class="builder-panel">
+        <div class="builder-title">Track pipeline status</div>
+        <div id="jobs-container"><p class="no-data">No jobs yet.</p></div>
+      </div>
+      <div class="builder-panel">
+        <div class="builder-title">Segmented corners preview</div>
+        <div id="segmented-curves-container"><p class="no-data">Upload a track to see segmented corners.</p></div>
+      </div>
     </div>
     <div id="tab-json" class="tab-content">
       <pre id="json-view">Connecting…</pre>
@@ -572,17 +1085,94 @@ let mapInited = false;
 let totalFrames = 0;
 let speedHistory = [], devHistory = [], timeHistory = [];
 let chartsInited = false;
+let jobsPollTimer = null;
+let trackReady = false;
+let streamStarted = false;
+let allowReconnect = false;
+const TAB_NAMES = ['recs','corners','charts','track','json'];
 const MAX_HISTORY = 600;
+
+function setTrackReady(ready) {
+  trackReady = !!ready;
+  document.getElementById('live-start-btn').disabled = !trackReady || streamStarted;
+  document.getElementById('live-start-msg').textContent = trackReady
+    ? 'Track ready. Start live analysis to stream car position and recommendations.'
+    : 'Complete Step 1 first. The stream starts only after a track is processed and activated.';
+
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    const name = TAB_NAMES[i];
+    if (name === 'track') {
+      b.disabled = false;
+      b.style.opacity = '1';
+      return;
+    }
+    b.disabled = !trackReady;
+    b.style.opacity = trackReady ? '1' : '0.45';
+  });
+}
+
+function renderSegmentedCurves(curves) {
+  const el = document.getElementById('segmented-curves-container');
+  if (!curves || curves.length === 0) {
+    el.innerHTML = '<p class="no-data">Upload a track to see segmented corners.</p>';
+    return;
+  }
+  el.innerHTML = curves.map(c => `
+    <div class="corner-card" style="margin-bottom:8px;">
+      <div class="corner-header">
+        <span class="corner-label">${c.label}</span>
+        <span class="corner-type">${c.type}</span>
+        <span class="corner-dir">${c.direction}</span>
+      </div>
+      <div class="corner-grid">
+        <span class="k">Start s</span><span class="v">${c.start_s} m</span>
+        <span class="k">Apex s</span><span class="v">${c.apex_s} m</span>
+        <span class="k">End s</span><span class="v">${c.end_s} m</span>
+        <span class="k">Length</span><span class="v">${c.length_m} m</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function cornerCategoryColor(category) {
+  const c = String(category || '').toUpperCase();
+  if (c === 'HAIRPIN') return '#ff3b30';
+  if (c === 'NINETY') return '#ff9800';
+  if (c === 'SIMPLE') return '#ffd400';
+  if (c === 'DOUBLE_APEX') return '#66d96b';
+  if (c === 'CHICANE') return '#c061ff';
+  return '#7fb3ff';
+}
+
+function buildCornerSegmentTraces(cornerRef) {
+  const traces = [];
+  (cornerRef || []).forEach(c => {
+    const seg = c.segment_xy || [];
+    if (!Array.isArray(seg) || seg.length < 2) return;
+    traces.push({
+      name: `${c.turn_id || 'T?'} ${c.category || ''}`,
+      x: seg.map(p => p[0]),
+      y: seg.map(p => p[1]),
+      mode: 'lines',
+      line: { color: cornerCategoryColor(c.category), width: 4 },
+      opacity: 0.9,
+      hovertemplate: `${c.turn_id || 'Turn'} · ${c.category || 'corner'}<extra></extra>`,
+      showlegend: false,
+    });
+  });
+  return traces;
+}
 
 // ── tab switching ─────────────────────────────────────────────────────────────
 function switchTab(name) {
+  if (!trackReady && name !== 'track') return;
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const names = ['recs','corners','charts','json'];
-    b.classList.toggle('active', names[i] === name);
+    b.classList.toggle('active', TAB_NAMES[i] === name);
   });
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'charts' && chartsInited) { Plotly.Plots.resize('speed-chart'); Plotly.Plots.resize('dev-chart'); }
+  if (name === 'track') loadJobs();
 }
 
 // ── init track map ─────────────────────────────────────────────────────────
@@ -591,9 +1181,13 @@ async function initMap() {
   const d = await res.json();
 
   document.getElementById('bag-label').textContent = d.bag_name;
+  document.getElementById('active-track-label').textContent = 'track: ' + (d.active_track || 'pending upload');
+  setTrackReady(!d.setup_required);
 
-  const rl = d.raceline, lb = d.left_boundary, rb = d.right_boundary;
+  const rl = d.raceline || [], lb = d.left_boundary || [], rb = d.right_boundary || [];
   const cm = d.corner_markers || [];
+  const cornerRef = d.corner_reference || [];
+  renderSegmentedCurves(d.segmented_curves || []);
 
   const traces = [
     { name: 'Left boundary',  x: lb.map(p=>p.x), y: lb.map(p=>p.y), mode:'lines', line:{color:'#444',width:1.5}, hoverinfo:'none' },
@@ -608,6 +1202,7 @@ async function initMap() {
       mode:'markers+text', textposition:'top center', textfont:{size:9,color:'#ffeb3b'},
       marker:{color:'#ffeb3b',size:7,symbol:'diamond'}, hovertemplate:'%{text}<extra></extra>'
     },
+    ...buildCornerSegmentTraces(cornerRef),
   ];
 
   const layout = {
@@ -623,6 +1218,43 @@ async function initMap() {
 
   Plotly.newPlot('track-map', traces, layout, {responsive:true, displayModeBar:false});
   mapInited = true;
+}
+
+async function refreshStaticTrack() {
+  if (!mapInited) return;
+  const res = await fetch('/static-data');
+  const d = await res.json();
+  document.getElementById('bag-label').textContent = d.bag_name;
+  document.getElementById('active-track-label').textContent = 'track: ' + (d.active_track || 'pending upload');
+  setTrackReady(!d.setup_required);
+
+  const rl = d.raceline || [];
+  const lb = d.left_boundary || [];
+  const rb = d.right_boundary || [];
+  const cm = d.corner_markers || [];
+  const cornerRef = d.corner_reference || [];
+  renderSegmentedCurves(d.segmented_curves || []);
+
+  Plotly.restyle('track-map', { x: [lb.map(p=>p.x)], y: [lb.map(p=>p.y)] }, [0]);
+  Plotly.restyle('track-map', { x: [rb.map(p=>p.x)], y: [rb.map(p=>p.y)] }, [1]);
+  Plotly.restyle('track-map', { x: [rl.map(p=>p.x)], y: [rl.map(p=>p.y)] }, [2]);
+  Plotly.restyle('track-map', {
+    x: [cm.map(c=>c.x)],
+    y: [cm.map(c=>c.y)],
+    text: [cm.map(c=>`${c.label}<br>${c.category}<br>${c.vx_apex_kmh} km/h`)],
+  }, [5]);
+
+  // Rebuild figure if number of segment traces changed
+  const segTraces = buildCornerSegmentTraces(cornerRef);
+  const totalExpected = 6 + segTraces.length;
+  const currentLen = document.getElementById('track-map').data?.length || 0;
+  if (currentLen !== totalExpected) {
+    await initMap();
+  } else {
+    segTraces.forEach((t, i) => {
+      Plotly.restyle('track-map', { x: [t.x], y: [t.y], line: [t.line] }, [6 + i]);
+    });
+  }
 }
 
 // ── update map with new trajectory ───────────────────────────────────────────
@@ -691,6 +1323,8 @@ function updateMetrics(snap) {
   seEl.textContent = (se >= 0 ? '+' : '') + se.toFixed(2);
   seEl.style.color = Math.abs(se) > 5 ? '#f44336' : Math.abs(se) > 2 ? '#ff9800' : '#4caf50';
   document.getElementById('m-pts').textContent     = m.points_analysed;
+  document.getElementById('m-compute').textContent = (snap.analytics_perf?.snapshot_compute_ms ?? 0).toFixed(2);
+  document.getElementById('m-recs').textContent    = (snap.recommendations || []).length;
 }
 
 // ── update recommendations ────────────────────────────────────────────────────
@@ -715,12 +1349,13 @@ function updateRecs(snap) {
 
 // ── update corners ────────────────────────────────────────────────────────────
 function updateCorners(snap) {
-  const corners = (snap.corners || []).filter(c => c.trajectory_coverage_pct > 5);
+  const corners = (snap.corners || []).filter(c => c.trajectory_coverage_pct > 1.0);
   const el = document.getElementById('corners-container');
   if (corners.length === 0) {
     el.innerHTML = '<p class="no-data">No corners covered yet.</p>'; return;
   }
   const sevColor = s => s > 0.6 ? '#f44336' : s > 0.3 ? '#ff9800' : '#4caf50';
+  const typeColor = t => cornerCategoryColor(t);
   el.innerHTML = corners.map(c => {
     const sp = c.speed_profile, dp = c.deviation_profile;
     const grid = sp ? `
@@ -736,9 +1371,9 @@ function updateCorners(snap) {
     <div class="corner-card">
       <div class="corner-header">
         <span class="corner-label">${c.label}</span>
-        <span class="corner-type">${c.type}</span>
+        <span class="corner-type" style="background:${typeColor(c.type)}33;color:${typeColor(c.type)}">${String(c.type).toUpperCase()}</span>
         <span class="corner-dir">${c.direction}</span>
-        <span class="corner-sev" style="color:${sevColor(c.severity_score)}">sev ${c.severity_score.toFixed(2)}</span>
+        <span class="corner-sev" style="color:${sevColor(c.severity_score)}">sev ${c.severity_score.toFixed(2)} · cov ${c.trajectory_coverage_pct.toFixed(1)}%</span>
       </div>
       ${grid}
     </div>`;
@@ -752,6 +1387,7 @@ function updateJson(snap) {
     schema_version: snap.schema_version,
     timestamp_utc: snap.timestamp_utc,
     source: snap.source,
+    analytics_perf: snap.analytics_perf,
     current_state: snap.current_state,
     running_metrics: snap.running_metrics,
     corners: snap.corners,
@@ -759,6 +1395,130 @@ function updateJson(snap) {
     optimum_reference: { corners: snap.optimum_reference?.corners?.length + ' corners', recommendations: snap.optimum_reference?.recommendations },
   };
   document.getElementById('json-view').textContent = JSON.stringify(out, null, 2);
+}
+
+function renderJobs(jobs) {
+  const el = document.getElementById('jobs-container');
+  if (!jobs || jobs.length === 0) {
+    el.innerHTML = '<p class="no-data">No jobs yet.</p>';
+    return;
+  }
+
+  el.innerHTML = jobs.map(j => {
+    const status = j.status || 'queued';
+    const corners = j.result?.segmented_curves?.length;
+    const infoLine = j.result
+      ? `Track ${j.result.optimum_trajectory.track_length_m} m • ${corners} curves`
+      : (j.error ? `Error: ${j.error}` : 'Processing...');
+
+    return `
+      <div class="job-card">
+        <div class="job-head">
+          <div><strong>${j.input_filename || j.job_id}</strong></div>
+          <span class="pill ${status}">${status}</span>
+        </div>
+        <div style="font-size:12px;color:#a9afc7;line-height:1.5;">${infoLine}</div>
+        <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:#7b829d;">${j.created_at || ''}</span>
+          <span style="font-size:11px;color:#7b829d;">${status === 'succeeded' ? 'auto-activated on completion' : ''}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function loadJobs() {
+  try {
+    const r = await fetch('/api/jobs');
+    const d = await r.json();
+    renderJobs(d.jobs || []);
+  } catch (err) {
+    document.getElementById('jobs-container').innerHTML = '<p class="no-data">Failed to load jobs.</p>';
+  }
+}
+
+async function uploadTrackJson() {
+  const fileEl = document.getElementById('track-file');
+  const msgEl = document.getElementById('track-upload-msg');
+  const btn = document.getElementById('track-upload-btn');
+  const file = fileEl.files && fileEl.files[0];
+  if (!file) {
+    msgEl.textContent = 'Please choose a JSON file first.';
+    return;
+  }
+
+  btn.disabled = true;
+  msgEl.textContent = 'Uploading and starting raceline pipeline...';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch('/api/upload-track', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) {
+      msgEl.textContent = d.detail || 'Upload failed.';
+      return;
+    }
+
+    msgEl.textContent = `Job ${d.job_id} started. Waiting for completion...`;
+    await pollJob(d.job_id);
+  } catch (err) {
+    msgEl.textContent = 'Upload failed: ' + err;
+  } finally {
+    btn.disabled = false;
+    fileEl.value = '';
+    loadJobs();
+  }
+}
+
+async function pollJob(jobId) {
+  const msgEl = document.getElementById('track-upload-msg');
+  for (let i = 0; i < 120; i++) {
+    const r = await fetch('/api/jobs/' + jobId);
+    const d = await r.json();
+    if (d.status === 'succeeded') {
+      msgEl.textContent = `Job ${jobId} complete. Activating generated optimum track...`;
+      await activateJob(jobId);
+      return;
+    }
+    if (d.status === 'failed') {
+      msgEl.textContent = `Job ${jobId} failed: ${d.error || 'unknown error'}`;
+      return;
+    }
+    await new Promise(res => setTimeout(res, 1500));
+  }
+  msgEl.textContent = `Job ${jobId} still running. Refresh jobs to continue monitoring.`;
+}
+
+async function activateJob(jobId) {
+  const msgEl = document.getElementById('track-upload-msg');
+  msgEl.textContent = `Activating track job ${jobId}...`;
+  try {
+    const r = await fetch('/api/jobs/' + jobId + '/activate', { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok) {
+      msgEl.textContent = d.detail || 'Activation failed.';
+      return;
+    }
+    msgEl.textContent = `Track ready: ${d.active_track} (${d.corner_count} curves). You can now start live analysis.`;
+    await refreshStaticTrack();
+    loadJobs();
+    switchTab('track');
+  } catch (err) {
+    msgEl.textContent = 'Activation failed: ' + err;
+  }
+}
+
+function startLivePlayback() {
+  if (!trackReady) {
+    document.getElementById('live-start-msg').textContent = 'Upload and process a track first.';
+    return;
+  }
+  if (streamStarted) return;
+  streamStarted = true;
+  allowReconnect = true;
+  document.getElementById('live-start-btn').disabled = true;
+  document.getElementById('live-start-msg').textContent = 'Live stream running...';
+  switchTab('recs');
+  connect();
 }
 
 // ── WebSocket stream ──────────────────────────────────────────────────────────
@@ -784,6 +1544,12 @@ function connect() {
     if (msg.type === 'error') {
       badge.textContent = 'ERROR'; badge.className = '';
       document.getElementById('json-view').textContent = 'Error: ' + msg.message;
+      if ((msg.message || '').toLowerCase().includes('track setup required')) {
+        allowReconnect = false;
+        streamStarted = false;
+        setTrackReady(false);
+        switchTab('track');
+      }
       return;
     }
 
@@ -807,7 +1573,7 @@ function connect() {
   };
 
   ws.onclose = () => {
-    if (badge.className !== 'done') {
+    if (badge.className !== 'done' && allowReconnect) {
       badge.textContent = 'DISCONNECTED'; badge.className = '';
       setTimeout(connect, 3000);
     }
@@ -815,7 +1581,12 @@ function connect() {
 }
 
 // ── boot ──────────────────────────────────────────────────────────────────────
-initMap().then(() => connect());
+initMap().then(() => {
+  loadJobs();
+  if (jobsPollTimer) clearInterval(jobsPollTimer);
+  jobsPollTimer = setInterval(loadJobs, 5000);
+  switchTab('track');
+});
 </script>
 </body>
 </html>
@@ -848,6 +1619,7 @@ def main():
         "bag": bag_path.name if bag_path.parent == WS_ROOT else str(bag_path),
         "raceline": args.raceline,
         "speed": args.speed,
+      "port": args.port,
     }
     # Patch startup to use absolute path if provided
     if bag_path.parent != WS_ROOT:
