@@ -1,0 +1,29 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/Badenia/Badenia560Pitot0.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct Badenia560Pitot0 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: -, Scale: 0.01, Offset: 0")
+      double pitot_front_press;
+
+      @verbatim (language="comment", text=
+        "Range: -, Scale: 0.01, Offset: 0")
+      double pitot_yaw_press;
+
+      @verbatim (language="comment", text=
+        "Range: -, Scale: 0.1, Offset: 0")
+      double pitot_yaw_angle;
+
+      @verbatim (language="comment", text=
+        "Range: -, Scale: 0.01, Offset: 600")
+      double pitot_absolute_press;
+    };
+  };
+};

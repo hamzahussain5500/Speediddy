@@ -1,0 +1,46 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/Badenia/Badenia560PowertrainTemp.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct Badenia560PowertrainTemp {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "========== v5 NEW: Rear Pushrod Strain ==========" "\n"
+        "Rear Left Pushrod Strain, Range: -, Scale: 1, Offset: 32768")
+      @unit (value="-")
+      double m_pushrod_strain_rl;
+
+      @verbatim (language="comment", text=
+        "Rear Right Pushrod Strain, Range: -, Scale: 1, Offset: 32768")
+      @unit (value="-")
+      double m_pushrod_strain_rr;
+
+      @verbatim (language="comment", text=
+        "========== v5 NEW: BSU Diagnostics ==========" "\n"
+        "BSU Prefill Diagnostics, Range: 0..15, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bsu_prefill_diag;
+
+      @verbatim (language="comment", text=
+        "========== Existing Signals ==========" "\n"
+        "Engine oil temperature, Range: -, Scale: 1, Offset: -40")
+      @unit (value="C")
+      double engine_oil_temperature;
+
+      @verbatim (language="comment", text=
+        "Engine water temperature, Range: -, Scale: 1, Offset: -40")
+      @unit (value="C")
+      double coolant_temperature;
+
+      @verbatim (language="comment", text=
+        "Gearbox oil temperature, Range: -, Scale: 0.1, Offset: 0")
+      @unit (value="C")
+      double gear_box_oil_temp;
+    };
+  };
+};

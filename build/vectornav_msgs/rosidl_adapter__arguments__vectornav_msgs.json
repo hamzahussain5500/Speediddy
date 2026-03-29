@@ -1,0 +1,8 @@
+{
+  "package_name": "vectornav_msgs",
+  "non_idl_tuples": [
+    "/home/hamza/hackathon_ws/src/sd_msgs/vectornav_msgs:msg/DOP.msg",
+    "/home/hamza/hackathon_ws/src/sd_msgs/vectornav_msgs:msg/GpsGroup.msg",
+    "/home/hamza/hackathon_ws/src/sd_msgs/vectornav_msgs:msg/TimeUTC.msg"
+  ]
+}

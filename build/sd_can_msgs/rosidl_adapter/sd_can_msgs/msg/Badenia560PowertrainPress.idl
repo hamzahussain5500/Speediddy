@@ -1,0 +1,45 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/Badenia/Badenia560PowertrainPress.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct Badenia560PowertrainPress {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "========== v5 NEW: Front Pushrod Strain ==========" "\n"
+        "Front Left Pushrod Strain, Range: -, Scale: 1, Offset: 32768")
+      @unit (value="-")
+      double m_pushrod_strain_fl;
+
+      @verbatim (language="comment", text=
+        "Front Right Pushrod Strain, Range: -, Scale: 1, Offset: 32768")
+      @unit (value="-")
+      double m_pushrod_strain_fr;
+
+      @verbatim (language="comment", text=
+        "========== Existing Signals ==========" "\n"
+        "Engine oil pressure, Range: -, Scale: 0.1, Offset: 0 (removed in DBC v5)")
+      @unit (value="kPa")
+      double engine_oil_pressure;
+
+      @verbatim (language="comment", text=
+        "Engine water pressure, Range: -, Scale: 0.1, Offset: 0 (removed in DBC v5)")
+      @unit (value="kPa")
+      double coolant_pressure;
+
+      @verbatim (language="comment", text=
+        "GDI pressure, Range: -, Scale: 1, Offset: 0")
+      @unit (value="kPa")
+      double fuel_press_direct;
+
+      @verbatim (language="comment", text=
+        "Boost pressure, Range: -, Scale: 0.1, Offset: 0")
+      @unit (value="kPa")
+      double boost_pressure;
+    };
+  };
+};

@@ -1,0 +1,1 @@
+/home/hamza/hackathon_ws/build/vectornav_msgs/rosidl_cmake/rosidl_cmake-extras.cmake

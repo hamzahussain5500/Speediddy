@@ -1,0 +1,1 @@
+/home/hamza/hackathon_ws/build/sd_map_msgs/ament_cmake_environment_hooks/local_setup.sh

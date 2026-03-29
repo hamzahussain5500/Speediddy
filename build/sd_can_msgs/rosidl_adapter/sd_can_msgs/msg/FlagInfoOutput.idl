@@ -1,0 +1,60 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/FlagInfoOutput.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Flag Info Output Message" "\n"
+      "CAN ID: 0x7C (124)" "\n"
+      "This message contains race management flag information and LED status" "\n"
+      "New in DBC v3 - provides race control and marshalling information")
+    struct FlagInfoOutput {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "LED status output from EMM Car Marshalling Equipment" "\n"
+        "Range: 0-255")
+      uint8 led_status;
+
+      @verbatim (language="comment", text=
+        "EMM Car Marshalling Equipment outputs free running counter" "\n"
+        "Range: 0-255")
+      uint8 free_running_counter;
+
+      @verbatim (language="comment", text=
+        "Spare field 1 for CAN ID 0x7C")
+      uint8 spare1_0x7_c;
+
+      @verbatim (language="comment", text=
+        "Spare field 2 for CAN ID 0x7C")
+      uint8 spare2_0x7_c;
+
+      @verbatim (language="comment", text=
+        "Session Management - Session Type" "\n"
+        "Values: 0=No Session, 64=Practice, 128=Qualifying, 192=Race")
+      uint8 sm_session_type;
+
+      @verbatim (language="comment", text=
+        "Session Management - Track Flag" "\n"
+        "Values: 0=No Flag, 5=Red Flag, 7=Safety Car Out, 11=Full Course Yellow, 13=Code 60")
+      uint8 sm_track_flag;
+
+      @verbatim (language="comment", text=
+        "Session Management - Car Flag" "\n"
+        "Values include: 0=Off, 3=Blue, 16=Chequered, 18=Black&White, 26=Blue Static," "\n"
+        "29=Yellow Speed Offender, 30=Go To Pit, 31=Long Lap, 32=Change Position," "\n"
+        "33=Long Lap x2, 34=Drive Through, 35=Ride Through, 38=Time Penalty," "\n"
+        "39=Loudness, 40=In Pit Penalty, 129=Orange Flag, 130=Purple Flag," "\n"
+        "131=Safe Stop Flag, 132=Emergency Stop Flag")
+      uint8 sm_car_flag;
+
+      @verbatim (language="comment", text=
+        "CRC checksum for Session Management data" "\n"
+        "Range: 0-255")
+      uint8 crc_sm;
+    };
+  };
+};

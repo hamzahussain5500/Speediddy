@@ -1,0 +1,23 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/HLMsg04.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct HLMsg04 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: (deg), Scale: 1E-007, Offset: 0")
+      @unit (value="-90..90")
+      double hl_latitude;
+
+      @verbatim (language="comment", text=
+        "Range: (deg), Scale: 1E-007, Offset: 0")
+      @unit (value="-180..180")
+      double hl_longitude;
+    };
+  };
+};

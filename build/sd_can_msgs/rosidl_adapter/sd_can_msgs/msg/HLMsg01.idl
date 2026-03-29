@@ -1,0 +1,41 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/HLMsg01.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct HLMsg01 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: 0..15 (0..15 uint), Scale: 1, Offset: 0")
+      uint8 hl_alive_01;
+
+      @verbatim (language="comment", text=
+        "Range: 0..2000 (0..100 %), Scale: 0.05, Offset: 0")
+      double hl_target_pressure_rr;
+
+      @verbatim (language="comment", text=
+        "Range: 0..2000 (0..100 %), Scale: 0.05, Offset: 0")
+      double hl_target_pressure_rl;
+
+      @verbatim (language="comment", text=
+        "Range: 0..2000 (0..100 %), Scale: 0.05, Offset: 0")
+      double hl_target_pressure_fr;
+
+      @verbatim (language="comment", text=
+        "Range: 0..2000 (0..100 %), Scale: 0.05, Offset: 0")
+      double hl_target_pressure_fl;
+
+      @verbatim (language="comment", text=
+        "Range: 0..9 (-1..8 enum), Scale: 1, Offset: -1")
+      uint8 hl_target_gear;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1000 (0..100 %), Scale: 0.1, Offset: 0")
+      double hl_target_throttle;
+    };
+  };
+};

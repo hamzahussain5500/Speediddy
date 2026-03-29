@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source /home/hamza/hackathon_ws/install/setup.bash)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3 -c \"import scipy; print\\(''scipy ok''\\)\")"
+    ]
+  }
+}

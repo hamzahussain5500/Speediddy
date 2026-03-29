@@ -1,0 +1,27 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/TEXIB6/TEXIB6rTx2.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Message definition for CAN ID 601 (TEXIB6r_Tx2)")
+    struct TEXIB6rTx2 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Gyroscope Z-axis")
+      double gyr_z;
+
+      @verbatim (language="comment", text=
+        "Gyroscope Y-axis")
+      double gyr_y;
+
+      @verbatim (language="comment", text=
+        "Gyroscope X-axis")
+      double gyr_x;
+    };
+  };
+};

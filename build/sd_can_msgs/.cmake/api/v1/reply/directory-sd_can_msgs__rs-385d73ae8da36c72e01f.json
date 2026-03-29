@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "sd_can_msgs__rs",
+		"source" : "/home/hamza/hackathon_ws/build/sd_can_msgs/sd_can_msgs__rs"
+	}
+}

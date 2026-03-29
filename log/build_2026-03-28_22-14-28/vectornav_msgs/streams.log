@@ -1,0 +1,261 @@
+[0.006s] Invoking command in '/home/hamza/hackathon_ws/build/vectornav_msgs': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/hamza/hackathon_ws/src/sd_msgs/vectornav_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/hamza/hackathon_ws/install/vectornav_msgs
+[0.172s] -- The C compiler identification is GNU 11.4.0
+[0.275s] -- The CXX compiler identification is GNU 11.4.0
+[0.284s] -- Detecting C compiler ABI info
+[0.331s] -- Detecting C compiler ABI info - done
+[0.335s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.335s] -- Detecting C compile features
+[0.335s] -- Detecting C compile features - done
+[0.338s] -- Detecting CXX compiler ABI info
+[0.384s] -- Detecting CXX compiler ABI info - done
+[0.388s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.388s] -- Detecting CXX compile features
+[0.388s] -- Detecting CXX compile features - done
+[0.395s] -- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+[0.479s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[0.520s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.543s] -- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)
+[0.576s] -- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[0.580s] -- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[0.588s] -- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[0.599s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.611s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.642s] -- Found rosidl_default_generators: 1.2.1 (/opt/ros/humble/share/rosidl_default_generators/cmake)
+[0.811s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[1.026s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.114s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.124s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[1.124s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[1.138s] -- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[1.138s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[1.138s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[1.138s] -- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+[1.147s] -- Found PythonExtra: .so  
+[1.239s] -- Configuring done
+[1.257s] -- Generating done
+[1.263s] -- Build files have been written to: /home/hamza/hackathon_ws/build/vectornav_msgs
+[1.268s] Invoked command in '/home/hamza/hackathon_ws/build/vectornav_msgs' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/hamza/hackathon_ws/src/sd_msgs/vectornav_msgs -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/hamza/hackathon_ws/install/vectornav_msgs
+[1.269s] Invoking command in '/home/hamza/hackathon_ws/build/vectornav_msgs': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/hamza/hackathon_ws/build/vectornav_msgs -- -j20 -l20
+[1.295s] [  2%] [34m[1mGenerating C code for ROS interfaces[0m
+[1.298s] [  4%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[1.303s] [  6%] [34m[1mGenerating Rust code for ROS interfaces[0m
+[1.308s] [  6%] Built target ament_cmake_python_symlink_vectornav_msgs
+[1.449s] running egg_info
+[1.449s] creating vectornav_msgs.egg-info
+[1.449s] writing vectornav_msgs.egg-info/PKG-INFO
+[1.449s] writing dependency_links to vectornav_msgs.egg-info/dependency_links.txt
+[1.450s] writing top-level names to vectornav_msgs.egg-info/top_level.txt
+[1.450s] writing manifest file 'vectornav_msgs.egg-info/SOURCES.txt'
+[1.453s] reading manifest file 'vectornav_msgs.egg-info/SOURCES.txt'
+[1.453s] writing manifest file 'vectornav_msgs.egg-info/SOURCES.txt'
+[1.470s] [  6%] Built target ament_cmake_python_build_vectornav_msgs_egg
+[1.610s] [  6%] Built target vectornav_msgs__rs
+[1.669s] [  8%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_generator_c.dir/rosidl_generator_c/vectornav_msgs/msg/detail/time_utc__functions.c.o[0m
+[1.671s] [ 10%] Built target vectornav_msgs__cpp
+[1.671s] [ 10%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_generator_c.dir/rosidl_generator_c/vectornav_msgs/msg/detail/dop__functions.c.o[0m
+[1.671s] [ 12%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_generator_c.dir/rosidl_generator_c/vectornav_msgs/msg/detail/gps_group__functions.c.o[0m
+[1.677s] [ 14%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[1.680s] [ 18%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[1.680s] [ 18%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[1.723s] [ 20%] [32m[1mLinking C shared library libvectornav_msgs__rosidl_generator_c.so[0m
+[1.745s] [ 20%] Built target vectornav_msgs__rosidl_generator_c
+[1.751s] [ 25%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[1.751s] [ 25%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[1.752s] [ 27%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[2.073s] [ 29%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/vectornav_msgs/msg/detail/dds_fastrtps/dop__type_support.cpp.o[0m
+[2.085s] [ 31%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/vectornav_msgs/msg/detail/dds_fastrtps/time_utc__type_support.cpp.o[0m
+[2.086s] [ 33%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/vectornav_msgs/msg/detail/dds_fastrtps/gps_group__type_support.cpp.o[0m
+[2.110s] [ 35%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/vectornav_msgs/msg/time_utc__type_support.cpp.o[0m
+[2.110s] [ 37%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/vectornav_msgs/msg/dop__type_support.cpp.o[0m
+[2.113s] [ 39%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/vectornav_msgs/msg/gps_group__type_support.cpp.o[0m
+[2.209s] [ 41%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/vectornav_msgs/msg/detail/gps_group__type_support.c.o[0m
+[2.209s] [ 43%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/vectornav_msgs/msg/detail/dop__type_support.c.o[0m
+[2.209s] [ 45%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/vectornav_msgs/msg/detail/time_utc__type_support.c.o[0m
+[2.218s] [ 50%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/vectornav_msgs/msg/detail/time_utc__type_support.cpp.o[0m
+[2.218s] [ 50%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/vectornav_msgs/msg/detail/gps_group__type_support.cpp.o[0m
+[2.222s] [ 52%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/vectornav_msgs/msg/detail/dop__type_support.cpp.o[0m
+[2.266s] [ 54%] [32m[1mLinking C shared library libvectornav_msgs__rosidl_typesupport_introspection_c.so[0m
+[2.275s] [ 56%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_c.dir/rosidl_typesupport_c/vectornav_msgs/msg/dop__type_support.cpp.o[0m
+[2.281s] [ 58%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_c.dir/rosidl_typesupport_c/vectornav_msgs/msg/gps_group__type_support.cpp.o[0m
+[2.287s] [ 64%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/vectornav_msgs/msg/detail/dop__type_support_c.cpp.o[0m
+[2.287s] [ 64%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_c.dir/rosidl_typesupport_c/vectornav_msgs/msg/time_utc__type_support.cpp.o[0m
+[2.287s] [ 64%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/vectornav_msgs/msg/detail/gps_group__type_support_c.cpp.o[0m
+[2.297s] [ 66%] [32mBuilding CXX object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/vectornav_msgs/msg/detail/time_utc__type_support_c.cpp.o[0m
+[2.309s] [ 66%] Built target vectornav_msgs__rosidl_typesupport_introspection_c
+[2.423s] [ 68%] [32m[1mLinking CXX shared library libvectornav_msgs__rosidl_typesupport_c.so[0m
+[2.532s] [ 68%] Built target vectornav_msgs__rosidl_typesupport_c
+[2.621s] [ 70%] [32m[1mLinking CXX shared library libvectornav_msgs__rosidl_typesupport_cpp.so[0m
+[2.658s] [ 70%] Built target vectornav_msgs__rosidl_typesupport_cpp
+[2.698s] [ 72%] [32m[1mLinking CXX shared library libvectornav_msgs__rosidl_typesupport_fastrtps_cpp.so[0m
+[2.709s] [ 75%] [32m[1mLinking CXX shared library libvectornav_msgs__rosidl_typesupport_introspection_cpp.so[0m
+[2.745s] [ 75%] Built target vectornav_msgs__rosidl_typesupport_fastrtps_cpp
+[2.751s] [ 75%] Built target vectornav_msgs__rosidl_typesupport_introspection_cpp
+[2.751s] [ 77%] [32m[1mLinking CXX shared library libvectornav_msgs__rosidl_typesupport_fastrtps_c.so[0m
+[2.799s] [ 77%] Built target vectornav_msgs__rosidl_typesupport_fastrtps_c
+[2.814s] [ 77%] Built target vectornav_msgs
+[2.828s] [ 79%] [34m[1mGenerating Python code for ROS interfaces[0m
+[3.327s] [ 79%] Built target vectornav_msgs__py
+[3.340s] [ 83%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_generator_py.dir/rosidl_generator_py/vectornav_msgs/msg/_gps_group_s.c.o[0m
+[3.340s] [ 83%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_generator_py.dir/rosidl_generator_py/vectornav_msgs/msg/_time_utc_s.c.o[0m
+[3.341s] [ 85%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_generator_py.dir/rosidl_generator_py/vectornav_msgs/msg/_dop_s.c.o[0m
+[3.399s] [ 87%] [32m[1mLinking C shared library rosidl_generator_py/vectornav_msgs/libvectornav_msgs__rosidl_generator_py.so[0m
+[3.424s] [ 87%] Built target vectornav_msgs__rosidl_generator_py
+[3.436s] [ 89%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/vectornav_msgs/_vectornav_msgs_s.ep.rosidl_typesupport_c.c.o[0m
+[3.438s] [ 93%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/vectornav_msgs/_vectornav_msgs_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[3.438s] [ 93%] [32mBuilding C object CMakeFiles/vectornav_msgs__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/vectornav_msgs/_vectornav_msgs_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[3.494s] [ 95%] [32m[1mLinking C shared library rosidl_generator_py/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so[0m
+[3.494s] [ 97%] [32m[1mLinking C shared library rosidl_generator_py/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so[0m
+[3.499s] [100%] [32m[1mLinking C shared library rosidl_generator_py/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so[0m
+[3.518s] [100%] Built target vectornav_msgs__rosidl_typesupport_introspection_c__pyext
+[3.520s] [100%] Built target vectornav_msgs__rosidl_typesupport_fastrtps_c__pyext
+[3.527s] [100%] Built target vectornav_msgs__rosidl_typesupport_c__pyext
+[3.534s] Invoked command in '/home/hamza/hackathon_ws/build/vectornav_msgs' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/hamza/hackathon_ws/build/vectornav_msgs -- -j20 -l20
+[3.536s] Invoking command in '/home/hamza/hackathon_ws/build/vectornav_msgs': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/hamza/hackathon_ws/build/vectornav_msgs
+[3.541s] -- Install configuration: ""
+[3.541s] -- Execute custom install script
+[3.542s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/ament_index/resource_index/rosidl_interfaces/vectornav_msgs
+[3.548s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__functions.h
+[3.553s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__struct.h
+[3.559s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__type_support.h
+[3.564s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__functions.h
+[3.568s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__struct.h
+[3.573s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__type_support.h
+[3.578s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__functions.h
+[3.584s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__struct.h
+[3.588s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__type_support.h
+[3.593s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/dop.h
+[3.598s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/gps_group.h
+[3.605s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/rosidl_generator_c__visibility_control.h
+[3.610s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/time_utc.h
+[3.614s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/library_path.sh
+[3.619s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/library_path.dsv
+[3.626s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__rosidl_typesupport_fastrtps_c.h
+[3.630s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__rosidl_typesupport_fastrtps_c.h
+[3.637s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__rosidl_typesupport_fastrtps_c.h
+[3.643s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[3.648s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__builder.hpp
+[3.655s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__struct.hpp
+[3.661s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__traits.hpp
+[3.667s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__type_support.hpp
+[3.674s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__builder.hpp
+[3.679s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__struct.hpp
+[3.684s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__traits.hpp
+[3.690s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__type_support.hpp
+[3.697s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__builder.hpp
+[3.703s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__struct.hpp
+[3.708s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__traits.hpp
+[3.715s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__type_support.hpp
+[3.719s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/dop.hpp
+[3.723s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/gps_group.hpp
+[3.729s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/rosidl_generator_cpp__visibility_control.hpp
+[3.735s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/time_utc.hpp
+[3.740s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__rosidl_typesupport_fastrtps_cpp.hpp
+[3.745s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__rosidl_typesupport_fastrtps_cpp.hpp
+[3.752s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__rosidl_typesupport_fastrtps_cpp.hpp
+[3.757s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[3.762s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__rosidl_typesupport_introspection_c.h
+[3.769s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__rosidl_typesupport_introspection_c.h
+[3.775s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__rosidl_typesupport_introspection_c.h
+[3.779s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[3.786s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/dop__rosidl_typesupport_introspection_cpp.hpp
+[3.790s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/gps_group__rosidl_typesupport_introspection_cpp.hpp
+[3.796s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/include/vectornav_msgs/vectornav_msgs/msg/detail/time_utc__rosidl_typesupport_introspection_cpp.hpp
+[3.802s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/pythonpath.sh
+[3.808s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/pythonpath.dsv
+[3.815s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs-3.0.0-py3.10.egg-info/PKG-INFO
+[3.820s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs-3.0.0-py3.10.egg-info/SOURCES.txt
+[3.825s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs-3.0.0-py3.10.egg-info/dependency_links.txt
+[3.830s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs-3.0.0-py3.10.egg-info/top_level.txt
+[3.836s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/__init__.py
+[3.840s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/_vectornav_msgs_s.ep.rosidl_typesupport_c.c
+[3.846s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/_vectornav_msgs_s.ep.rosidl_typesupport_fastrtps_c.c
+[3.852s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/_vectornav_msgs_s.ep.rosidl_typesupport_introspection_c.c
+[3.858s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/libvectornav_msgs__rosidl_generator_py.so
+[3.865s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/__init__.py
+[3.869s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_dop.py
+[3.876s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_dop_s.c
+[3.882s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_gps_group.py
+[3.888s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_gps_group_s.c
+[3.893s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_time_utc.py
+[3.899s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_time_utc_s.c
+[3.905s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[3.911s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[3.917s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[3.924s] -- Up-to-date symlink: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so
+[3.924s] -- Up-to-date symlink: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so
+[3.925s] -- Up-to-date symlink: /home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/vectornav_msgs_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so
+[3.925s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/ament_index/resource_index/rust_packages/vectornav_msgs
+[3.932s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/rust/Cargo.toml
+[3.938s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/rust/build.rs
+[3.944s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/rust/src/lib.rs
+[3.951s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/rust/src/msg.rs
+[3.956s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/rust/src/msg/rmw.rs
+[3.962s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/msg/DOP.idl
+[3.966s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/msg/GpsGroup.idl
+[3.972s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/msg/TimeUTC.idl
+[3.978s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/msg/DOP.msg
+[3.984s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/msg/GpsGroup.msg
+[3.988s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/msg/TimeUTC.msg
+[3.993s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/ament_index/resource_index/package_run_dependencies/vectornav_msgs
+[3.998s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/ament_index/resource_index/parent_prefix_path/vectornav_msgs
+[4.005s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/ament_prefix_path.sh
+[4.011s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/ament_prefix_path.dsv
+[4.016s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/path.sh
+[4.020s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/environment/path.dsv
+[4.025s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/local_setup.bash
+[4.031s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/local_setup.sh
+[4.036s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/local_setup.zsh
+[4.040s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/local_setup.dsv
+[4.046s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/package.dsv
+[4.051s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/ament_index/resource_index/packages/vectornav_msgs
+[4.056s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/rosidl_cmake-extras.cmake
+[4.061s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/ament_cmake_export_dependencies-extras.cmake
+[4.066s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/ament_cmake_export_include_directories-extras.cmake
+[4.072s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/ament_cmake_export_libraries-extras.cmake
+[4.078s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/ament_cmake_export_targets-extras.cmake
+[4.083s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[4.089s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[4.096s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgsConfig.cmake
+[4.100s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgsConfig-version.cmake
+[4.107s] -- Symlinking: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/package.xml
+[4.113s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_generator_c.so
+[4.113s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_generator_c.so" to ""
+[4.114s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_fastrtps_c.so
+[4.114s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_fastrtps_c.so" to ""
+[4.114s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_fastrtps_cpp.so
+[4.114s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_fastrtps_cpp.so" to ""
+[4.114s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_introspection_c.so
+[4.115s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_introspection_c.so" to ""
+[4.115s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_c.so
+[4.115s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_c.so" to ""
+[4.115s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_introspection_cpp.so
+[4.115s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_introspection_cpp.so" to ""
+[4.115s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_cpp.so
+[4.115s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_typesupport_cpp.so" to ""
+[4.136s] Listing '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs'...
+[4.137s] Compiling '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/__init__.py'...
+[4.137s] Listing '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg'...
+[4.137s] Compiling '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/__init__.py'...
+[4.137s] Compiling '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_dop.py'...
+[4.137s] Compiling '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_gps_group.py'...
+[4.137s] Compiling '/home/hamza/hackathon_ws/install/vectornav_msgs/local/lib/python3.10/dist-packages/vectornav_msgs/msg/_time_utc.py'...
+[4.139s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_generator_py.so
+[4.139s] -- Set runtime path of "/home/hamza/hackathon_ws/install/vectornav_msgs/lib/libvectornav_msgs__rosidl_generator_py.so" to ""
+[4.139s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_generator_cExport.cmake
+[4.139s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_generator_cExport-noconfig.cmake
+[4.139s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_typesupport_fastrtps_cExport.cmake
+[4.139s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_generator_cppExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_typesupport_fastrtps_cppExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_introspection_cExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_cExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_cExport-noconfig.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_introspection_cppExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_cppExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/vectornav_msgs__rosidl_typesupport_cppExport-noconfig.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_generator_pyExport.cmake
+[4.140s] -- Installing: /home/hamza/hackathon_ws/install/vectornav_msgs/share/vectornav_msgs/cmake/export_vectornav_msgs__rosidl_generator_pyExport-noconfig.cmake
+[4.142s] Invoked command in '/home/hamza/hackathon_ws/build/vectornav_msgs' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /home/hamza/hackathon_ws/build/vectornav_msgs

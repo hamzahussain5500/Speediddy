@@ -1,0 +1,33 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/CbaStatusRl.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct CbaStatusRl {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: 0..4095 (0..40950000 Pa), Scale: 10000, Offset: 0")
+      double cba_actual_pressure_rl_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..2000 (0..100 %), Scale: 0.05, Offset: 0")
+      double cba_actual_pressure_rl;
+
+      @verbatim (language="comment", text=
+        "Range: 0..2000 (0..100 %), Scale: 0.05, Offset: 0")
+      double cba_target_pressure_rl_ack;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1000 (-50..50 A), Scale: 0.1, Offset: -50")
+      double cba_actual_current_rl_a;
+
+      @verbatim (language="comment", text=
+        "Range: 0..255 (0..102 V), Scale: 0.4, Offset: 0")
+      double cba_voltage_rl_v;
+    };
+  };
+};

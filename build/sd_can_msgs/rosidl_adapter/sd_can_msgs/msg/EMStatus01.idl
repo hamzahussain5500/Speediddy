@@ -1,0 +1,47 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/EMStatus01.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct EMStatus01 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "EM status for the system" "\n"
+        "Voltage in volts (0..25.4 bar)")
+      uint8 dcdc4812_voltage_v;
+
+      @verbatim (language="comment", text=
+        "EM status code")
+      uint16 em_status;
+
+      @verbatim (language="comment", text=
+        "Deceleration 1 in m/s")
+      double hl_stop_deceleration_1;
+
+      @verbatim (language="comment", text=
+        "Deceleration 2 in m/s")
+      double hl_stop_deceleration_2;
+
+      @verbatim (language="comment", text=
+        "Time to deceleration 1 in seconds")
+      double hl_stop_time_to_dec_1;
+
+      @verbatim (language="comment", text=
+        "Time to deceleration 2 in seconds")
+      double hl_stop_time_to_dec_2;
+
+      @verbatim (language="comment", text=
+        " Fields from the legacy message" "\n"
+        "Range: 0..120_legacy (0..12 bar)")
+      double emb_line_pressure_bar_legacy;
+
+      @verbatim (language="comment", text=
+        "Range: 0..120_legacy (0..12 bar)")
+      double emb_tank_pressure_bar_legacy;
+    };
+  };
+};

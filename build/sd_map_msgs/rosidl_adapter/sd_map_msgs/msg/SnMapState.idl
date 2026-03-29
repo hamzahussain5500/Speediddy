@@ -1,0 +1,23 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_map_msgs/msg/map_ar/SnMapState.msg
+// generated code does not contain a copyright notice
+
+#include "sd_map_msgs/msg/SnLaneState.idl"
+
+module sd_map_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Classification of the point's location")
+    struct SnMapState {
+      uint8 current_lane;
+
+      @verbatim (language="comment", text=
+        "Projection and border data for the track lane")
+      sd_map_msgs::msg::SnLaneState track_sn_state;
+
+      @verbatim (language="comment", text=
+        "Projection and border data for the pitlane lane")
+      sd_map_msgs::msg::SnLaneState pitlane_sn_state;
+    };
+  };
+};

@@ -1,0 +1,21 @@
+[0.357s] Invoking command in '/home/hamza/hackathon_ws/src/racing_analyzer': CMAKE_PREFIX_PATH=/home/hamza/hackathon_ws/install/sd_localization_msgs:/home/hamza/hackathon_ws/install/sd_map_msgs:/home/hamza/hackathon_ws/install/vectornav_msgs:/home/hamza/hackathon_ws/install/sd_can_msgs LD_LIBRARY_PATH=/home/hamza/hackathon_ws/install/sd_localization_msgs/lib:/home/hamza/hackathon_ws/install/sd_map_msgs/lib:/home/hamza/hackathon_ws/install/vectornav_msgs/lib:/home/hamza/hackathon_ws/install/sd_can_msgs/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib PYTHONPATH=/home/hamza/hackathon_ws/build/racing_analyzer/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/hamza/hackathon_ws/install/racing_analyzer/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/racing_analyzer build --build-base /home/hamza/hackathon_ws/build/racing_analyzer/build install --record /home/hamza/hackathon_ws/build/racing_analyzer/install.log --single-version-externally-managed install_data
+[0.488s] running egg_info
+[0.489s] writing ../../build/racing_analyzer/racing_analyzer.egg-info/PKG-INFO
+[0.489s] writing dependency_links to ../../build/racing_analyzer/racing_analyzer.egg-info/dependency_links.txt
+[0.489s] writing entry points to ../../build/racing_analyzer/racing_analyzer.egg-info/entry_points.txt
+[0.489s] writing requirements to ../../build/racing_analyzer/racing_analyzer.egg-info/requires.txt
+[0.489s] writing top-level names to ../../build/racing_analyzer/racing_analyzer.egg-info/top_level.txt
+[0.490s] reading manifest file '../../build/racing_analyzer/racing_analyzer.egg-info/SOURCES.txt'
+[0.490s] writing manifest file '../../build/racing_analyzer/racing_analyzer.egg-info/SOURCES.txt'
+[0.490s] running build
+[0.490s] running build_py
+[0.491s] running install
+[0.491s] running install_lib
+[0.492s] running install_data
+[0.492s] running install_egg_info
+[0.493s] removing '/home/hamza/hackathon_ws/install/racing_analyzer/lib/python3.10/site-packages/racing_analyzer-0.0.1-py3.10.egg-info' (and everything under it)
+[0.493s] Copying ../../build/racing_analyzer/racing_analyzer.egg-info to /home/hamza/hackathon_ws/install/racing_analyzer/lib/python3.10/site-packages/racing_analyzer-0.0.1-py3.10.egg-info
+[0.493s] running install_scripts
+[0.505s] Installing path_publisher script to /home/hamza/hackathon_ws/install/racing_analyzer/lib/racing_analyzer
+[0.505s] writing list of installed files to '/home/hamza/hackathon_ws/build/racing_analyzer/install.log'
+[0.519s] Invoked command in '/home/hamza/hackathon_ws/src/racing_analyzer' returned '0': CMAKE_PREFIX_PATH=/home/hamza/hackathon_ws/install/sd_localization_msgs:/home/hamza/hackathon_ws/install/sd_map_msgs:/home/hamza/hackathon_ws/install/vectornav_msgs:/home/hamza/hackathon_ws/install/sd_can_msgs LD_LIBRARY_PATH=/home/hamza/hackathon_ws/install/sd_localization_msgs/lib:/home/hamza/hackathon_ws/install/sd_map_msgs/lib:/home/hamza/hackathon_ws/install/vectornav_msgs/lib:/home/hamza/hackathon_ws/install/sd_can_msgs/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib PYTHONPATH=/home/hamza/hackathon_ws/build/racing_analyzer/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/hamza/hackathon_ws/install/racing_analyzer/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/racing_analyzer build --build-base /home/hamza/hackathon_ws/build/racing_analyzer/build install --record /home/hamza/hackathon_ws/build/racing_analyzer/install.log --single-version-externally-managed install_data

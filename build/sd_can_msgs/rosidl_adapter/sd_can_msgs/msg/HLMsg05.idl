@@ -1,0 +1,33 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/HLMsg05.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct HLMsg05 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: (m), Scale: 0.1, Offset: 0")
+      @unit (value="-3276.8..3276.7")
+      double hl_height;
+
+      @verbatim (language="comment", text=
+        "Range: (m/s), Scale: 0.005, Offset: 0")
+      @unit (value="-163.84..163.83")
+      double hl_vel_east;
+
+      @verbatim (language="comment", text=
+        "Range: (m/s), Scale: 0.005, Offset: 0")
+      @unit (value="-163.84..163.83")
+      double hl_vel_north;
+
+      @verbatim (language="comment", text=
+        "Range: (m/s), Scale: 0.005, Offset: 0")
+      @unit (value="-163.84..163.83")
+      double hl_vel_up;
+    };
+  };
+};

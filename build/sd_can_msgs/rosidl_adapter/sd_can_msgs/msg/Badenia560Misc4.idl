@@ -1,0 +1,61 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/Badenia/Badenia560Misc4.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Badenia560 Misc4 (NEW in v5)" "\n"
+      "Frame ID: 0x453" "\n"
+      "TPMS Diagnostics - Transmission check and alive counters")
+    struct Badenia560Misc4 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "========== TPMS TRANSMISSION CHECK FLAGS ==========" "\n"
+        "0 = TPMS sensor is transmitting, 1 = Not transmitting" "\n"
+        "Front Left TPMS Transmission Check, Range: 0..1, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_check_fl;
+
+      @verbatim (language="comment", text=
+        "Front Right TPMS Transmission Check, Range: 0..1, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_check_fr;
+
+      @verbatim (language="comment", text=
+        "Rear Left TPMS Transmission Check, Range: 0..1, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_check_rl;
+
+      @verbatim (language="comment", text=
+        "Rear Right TPMS Transmission Check, Range: 0..1, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_check_rr;
+
+      @verbatim (language="comment", text=
+        "========== TPMS ALIVE COUNTERS ==========" "\n"
+        "Alive signal from each TPMS sensor (increments with each transmission)" "\n"
+        "Front Left TPMS Alive Count, Range: 0..255, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_tx_count_fl;
+
+      @verbatim (language="comment", text=
+        "Front Right TPMS Alive Count, Range: 0..255, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_tx_count_fr;
+
+      @verbatim (language="comment", text=
+        "Rear Left TPMS Alive Count, Range: 0..255, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_tx_count_rl;
+
+      @verbatim (language="comment", text=
+        "Rear Right TPMS Alive Count, Range: 0..255, Scale: 1, Offset: 0")
+      @unit (value="-")
+      uint8 bad_tpms_tx_count_rr;
+    };
+  };
+};

@@ -1,0 +1,35 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_map_msgs/msg/map_ar/SnState.msg
+// generated code does not contain a copyright notice
+
+
+module sd_map_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Index on the reference line. -1 means uninitialized." "\n"
+      "Closest reference line index")
+    struct SnState {
+      uint32 idx;
+
+      @verbatim (language="comment", text=
+        "Longitudinal offset (progress) from x_ref[idx], y_ref[idx], e.g 0.5m" "\n"
+        "always less than 1.1m." "\n"
+        "Distance along the curve from the reference point to the projection")
+      double ds;
+
+      @verbatim (language="comment", text=
+        "ds / ds_curv_step. Progress in terms of index general coordinates.")
+      double d_idx;
+
+      @verbatim (language="comment", text=
+        "Lateral offset from the reference curve")
+      double n;
+
+      @verbatim (language="comment", text=
+        "Heading error w.r.t the reference curve")
+      double epsi;
+
+      uint8 status;
+    };
+  };
+};

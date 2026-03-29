@@ -1,0 +1,29 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/kistler/KistlerVelAngle.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct KistlerVelAngle {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: -11111..11111 (-400..400 km/h), Scale: 0.036, Offset: 0")
+      double vel_x;
+
+      @verbatim (language="comment", text=
+        "Range: -2778..2778 (-100..100 km/h), Scale: 0.036, Offset: 0")
+      double vel_y;
+
+      @verbatim (language="comment", text=
+        "Range: -11111..11111 (-400..400 km/h), Scale: 0.036, Offset: 0")
+      double vel;
+
+      @verbatim (language="comment", text=
+        "Range: -4500..4500 (-45..45 °), Scale: 0.01, Offset: 0")
+      double angle;
+    };
+  };
+};

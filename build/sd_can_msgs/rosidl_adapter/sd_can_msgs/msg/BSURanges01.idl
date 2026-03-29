@@ -1,0 +1,53 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/BSURanges01.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct BSURanges01 {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..100000 Pa)")
+      double cba_min_pressure_fl_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..30 (5000000..20000000 Pa)")
+      double cba_max_pressure_fl_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..100000 Pa)")
+      double cba_min_pressure_fr_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..30 (5000000..20000000 Pa)")
+      double cba_max_pressure_fr_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..100000 Pa)")
+      double cba_min_pressure_rl_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..30 (5000000..20000000 Pa)")
+      double cba_max_pressure_rl_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..100000 Pa)")
+      double cba_min_pressure_rr_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..30 (5000000..20000000 Pa)")
+      double cba_max_pressure_rr_pa;
+
+      @verbatim (language="comment", text=
+        "Range: 0..100 (0..100 %)")
+      double ice_max_throttle;
+
+      @verbatim (language="comment", text=
+        "Range: 0..100 (0..100 %)")
+      double ice_min_throttle;
+    };
+  };
+};

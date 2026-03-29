@@ -1,0 +1,90 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/DiagnosticWord02Updated.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct DiagnosticWord02Updated {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Diagnostic word information for BSU" "\n"
+        "RC Force Race Mode (0..1)")
+      uint8 rc_force_race_mode;
+
+      @verbatim (language="comment", text=
+        "RC Beacon Timeout (0..1)")
+      uint8 rc_beacon_time_out;
+
+      @verbatim (language="comment", text=
+        "Display Timeout Error (0..1)")
+      uint8 display_timeout_error;
+
+      @verbatim (language="comment", text=
+        "RM Red Flag (0..1)")
+      uint8 rm_red_flag;
+
+      @verbatim (language="comment", text=
+        "RM Safe Stop (0..1)")
+      uint8 rm_safe_stop;
+
+      @verbatim (language="comment", text=
+        "Display Counter Error (0..1)")
+      uint8 display_counter_error;
+
+      @verbatim (language="comment", text=
+        "CBA EM Brake Sat Not Received (0..1)")
+      uint8 cba_em_brake_sat_not_received;
+
+      @verbatim (language="comment", text=
+        "CBA Sat Values Not Received (0..1)")
+      uint8 cba_sat_values_not_received;
+
+      @verbatim (language="comment", text=
+        "ICE Oil Temp Start Limit Not Received (0..1)")
+      uint8 ice_oil_temp_start_limit_not_rec;
+
+      @verbatim (language="comment", text=
+        "ML Stop Brake Sat Not Received (0..1)")
+      uint8 ml_stop_brake_sat_not_received;
+
+      @verbatim (language="comment", text=
+        "PSA Sat Values Not Received (0..1)")
+      uint8 psa_sat_values_not_received;
+
+      @verbatim (language="comment", text=
+        "Limp Sat Values Not Received (0..1)")
+      uint8 limp_sat_values_not_received;
+
+      @verbatim (language="comment", text=
+        "Fan Car Speed Max Value Not Received (0..1)")
+      uint8 fan_car_speed_max_value_not_rec;
+
+      @verbatim (language="comment", text=
+        "Fan Car Speed Min Value Not Received (0..1)")
+      uint8 fan_car_speed_min_value_not_rec;
+
+      @verbatim (language="comment", text=
+        "Fan Water Temp Max Value Not Received (0..1)")
+      uint8 fan_water_temp_max_value_not_rec;
+
+      @verbatim (language="comment", text=
+        "Fan Water Temp Min Value Not Received (0..1)")
+      uint8 fan_water_temp_min_value_not_rec;
+
+      @verbatim (language="comment", text=
+        "Heater Oil Temp Max Value Not Received (0..1)")
+      uint8 heater_oil_temp_max_value_not_rec;
+
+      @verbatim (language="comment", text=
+        "ICE Fuel Pres Start Limit Not Received (0..1)")
+      uint8 ice_fuel_pres_start_limit_not_rec;
+
+      @verbatim (language="comment", text=
+        "ICE Oil Temp Bypass Not Received (0..1)")
+      uint8 ice_oil_temp_by_pass_not_received;
+    };
+  };
+};

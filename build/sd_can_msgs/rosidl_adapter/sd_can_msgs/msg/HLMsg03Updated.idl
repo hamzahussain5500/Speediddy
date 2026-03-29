@@ -1,0 +1,60 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/BSU/HLMsg03Updated.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "EAC24BsuHlMsg03.msg")
+    struct HLMsg03Updated {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "HL message for the system" "\n"
+        "Alive status (0..15)")
+      uint8 hl_alive_03;
+
+      @verbatim (language="comment", text=
+        "DBW (Drive by Wire) enabled status (0..1)")
+      boolean hl_dbw_enable;
+
+      @verbatim (language="comment", text=
+        "Push-to-pass status (0..1)")
+      uint8 hl_push_to_pass_on;
+
+      @verbatim (language="comment", text=
+        "GNSS activation status (0..1)")
+      boolean hl_pdu12_activate_gnss;
+
+      @verbatim (language="comment", text=
+        "OSS activation status (0..1)")
+      boolean hl_pdu12_activate_oss;
+
+      @verbatim (language="comment", text=
+        "ICE (Internal Combustion Engine) enabled status (0..1)")
+      boolean hl_ice_enable;
+
+      @verbatim (language="comment", text=
+        "Lidar activation status (0..1)")
+      boolean hl_pdu12_activate_lidar;
+
+      @verbatim (language="comment", text=
+        "Radar activation status (0..1)")
+      boolean hl_pdu12_activate_radar;
+
+      @verbatim (language="comment", text=
+        "Start fuel level in liters (0..655.35)")
+      uint16 ice_start_fuel_level_l;
+
+      @verbatim (language="comment", text=
+        "Cranking bypass status (0..1)")
+      boolean hl_crancking_by_pass;
+
+      @verbatim (language="comment", text=
+        "Switch-off confirmation status (0..1)")
+      boolean hl_switch_off_ok;
+    };
+  };
+};

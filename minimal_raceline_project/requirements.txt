@@ -1,0 +1,15 @@
+# Core numeric stack
+numpy>=1.23,<2.0
+scipy>=1.10
+PyYAML>=6.0
+trajectory-planning-helpers
+
+# Planner stack
+commonroad-io>=2022.2
+cvxpy>=1.4
+matplotlib<3.9
+quadprog<=1.0
+casadi<4.0.0
+
+# Planner source code is vendored in this project under ./vendor,
+# so no extra planner package install is required.

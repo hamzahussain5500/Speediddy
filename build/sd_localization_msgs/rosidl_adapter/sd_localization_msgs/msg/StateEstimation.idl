@@ -1,0 +1,141 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_localization_msgs/msg/StateEstimation.msg
+// generated code does not contain a copyright notice
+
+#include "sd_map_msgs/msg/SnMapState.idl"
+#include "std_msgs/msg/Header.idl"
+
+module sd_localization_msgs {
+  module msg {
+    typedef double double__3[3];
+    struct StateEstimation {
+      std_msgs::msg::Header header;
+
+      int32 se_status;
+
+      int32 se_state;
+
+      double x_m;
+
+      double y_m;
+
+      double z_m;
+
+      double roll_rad;
+
+      double pitch_rad;
+
+      double yaw_rad;
+
+      double__3 pos_accuracy;
+
+      double__3 vel_accuracy;
+
+      double wx_radps;
+
+      double wy_radps;
+
+      double wz_radps;
+
+      double vx_mps;
+
+      double vy_mps;
+
+      double vz_mps;
+
+      double omega_w_fl;
+
+      double omega_w_fr;
+
+      double omega_w_rl;
+
+      double omega_w_rr;
+
+      double v_mps;
+
+      double v_raw_mps;
+
+      double beta_rad;
+
+      double ax_mps2;
+
+      double ay_mps2;
+
+      double az_mps2;
+
+      boolean valid_imu_b;
+
+      double yaw_vel_rad;
+
+      double kappa_radpm;
+
+      double dbeta_radps;
+
+      double ddyaw_radps2;
+
+      double ax_vel_mps2;
+
+      double ay_vel_mps2;
+
+      double lambda_fl_perc;
+
+      double lambda_fr_perc;
+
+      double lambda_rl_perc;
+
+      double lambda_rr_perc;
+
+      boolean valid_wheelsspeeds_b;
+
+      double alpha_fl_rad;
+
+      double alpha_fr_rad;
+
+      double alpha_rl_rad;
+
+      double alpha_rr_rad;
+
+      double diff_fr_alpha_rad;
+
+      double delta_wheel_rad;
+
+      double timestamp;
+
+      double gas;
+
+      double brake;
+
+      double clutch;
+
+      double gear;
+
+      double rpm;
+
+      double front_brake_pressure;
+
+      double rear_brake_pressure;
+
+      double vehicle_timestamp;
+
+      @verbatim (language="comment", text=
+        "depricated")
+      boolean residuals_status;
+
+      @verbatim (language="comment", text=
+        "depricated")
+      boolean std_dev_status;
+
+      boolean is_safe;
+
+      double cba_actual_pressure_fl_pa;
+
+      double cba_actual_pressure_fr_pa;
+
+      double cba_actual_pressure_rl_pa;
+
+      double cba_actual_pressure_rr_pa;
+
+      sd_map_msgs::msg::SnMapState sn_map_state;
+    };
+  };
+};

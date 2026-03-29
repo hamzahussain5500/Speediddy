@@ -1,0 +1,77 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from sd_can_msgs/msg/kistler/KistlerStatus.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module sd_can_msgs {
+  module msg {
+    struct KistlerStatus {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Range: 0..9999 (0..9999 -), Scale: 1, Offset: 0")
+      uint16 sensor_id;
+
+      @verbatim (language="comment", text=
+        "Range: -128..127 (-128..127 °C), Scale: 1, Offset: 0")
+      double temperature;
+
+      @verbatim (language="comment", text=
+        "Range: 0..255 (0..2.55 A), Scale: 0.01, Offset: 0")
+      double lamp_current;
+
+      @verbatim (language="comment", text=
+        "Range: 0..255 (0..255 -), Scale: 1, Offset: 0")
+      uint8 filter_setting;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 stst;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 filter_off_on;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 lamp_current_control;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 temperature_ok;
+
+      @verbatim (language="comment", text=
+        "Range: 0..3 (0..3 -), Scale: 1, Offset: 0")
+      uint8 head_status;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 angle_switched_off;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 direction;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 ang_vel_correction;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 direction_motion;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 direction_mounting;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 direction_head_is_valid;
+
+      @verbatim (language="comment", text=
+        "Range: 0..1 (0..1 -), Scale: 1, Offset: 0")
+      uint8 direction_head;
+    };
+  };
+};
