@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/src/sd_msgs/sd_can_msgs/msg/MM710/MM710TX3YAZ.msg

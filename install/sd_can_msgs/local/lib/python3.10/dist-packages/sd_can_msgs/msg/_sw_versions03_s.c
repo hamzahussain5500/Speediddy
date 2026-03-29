@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_generator_py/sd_can_msgs/msg/_sw_versions03_s.c

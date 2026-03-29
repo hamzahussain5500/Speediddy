@@ -1,3 +1,0 @@
-[console_scripts]
-path_publisher = racing_analyzer.path_publisher_node:main
-

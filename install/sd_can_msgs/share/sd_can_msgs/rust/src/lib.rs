@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_generator_rs/sd_can_msgs/rust/src/lib.rs

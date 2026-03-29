@@ -1,8 +1,0 @@
-{
-  "package_name": "sd_map_msgs",
-  "non_idl_tuples": [
-    "/home/hamza/hackathon_ws/src/sd_msgs/sd_map_msgs:msg/map_ar/SnLaneState.msg",
-    "/home/hamza/hackathon_ws/src/sd_msgs/sd_map_msgs:msg/map_ar/SnMapState.msg",
-    "/home/hamza/hackathon_ws/src/sd_msgs/sd_map_msgs:msg/map_ar/SnState.msg"
-  ]
-}

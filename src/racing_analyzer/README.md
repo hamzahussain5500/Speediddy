@@ -67,15 +67,21 @@ hackathon_ws/
 │   ├── racing_analyzer/
 │   │   └── ros2_adapter.py          # ROS 2 node: subscribes to state_estimation
 │   ├── analyze_bag.py               # CLI: MCAP bag → terminal race report
+│   ├── Dockerfile                   # Multi-stage Docker build (no ROS)
+│   ├── requirements.txt
 │   └── tests/                       # Unit and integration tests
 │
-├── dashboard_server.py              # Real-time WebSocket dashboard
-├── raceline_hybrid.csv              # Optimal reference path (hybrid method)
-├── raceline_minimum_curvature.csv   # Alternative reference path
-├── yas_marina_bnd.json              # Left/right track boundary coordinates
-└── outputs/
-    └── yas_marina_bnd_hybrid_corner_analysis.json  # Pre-computed corner map
+├── raceline_hybrid.csv              # Optimal reference path (hybrid method)      ← tracked in git
+├── raceline_minimum_curvature.csv   # Alternative reference path                  ← tracked in git
+├── yas_marina_bnd.json              # Left/right track boundary coordinates        ← tracked in git
+│
+│   # ── NOT in git (add to your local data directory) ───────────────────────────
+├── hackathon_wheel_to_wheel.mcap    # Race bag — download separately (*.mcap in .gitignore)
+├── hackathon_fast_laps.mcap         # Fast laps bag — download separately
+└── hackathon_good_lap.mcap          # Good lap bag — download separately
 ```
+
+> **Note on MCAP files**: `*.mcap` files are excluded from version control (see `.gitignore`) because they are large binary files. Place them in the same directory as the CSV/JSON reference data, or point the CLI at them directly with a full path.
 
 ---
 
@@ -695,13 +701,30 @@ Reads ROS 2 MCAP bag files directly and prints a formatted terminal race report.
 ### Usage
 
 ```bash
-cd /home/hamza/hackathon_ws
+cd /home/hamza/hackathon_ws/src/racing_analyzer
 
-python src/racing_analyzer/analyze_bag.py                          # default bag
-python src/racing_analyzer/analyze_bag.py hackathon_fast_laps.mcap
-python src/racing_analyzer/analyze_bag.py --all                    # all 3 bags
-python src/racing_analyzer/analyze_bag.py --raceline minimum_curvature
+# Default bag (hackathon_wheel_to_wheel.mcap) — data dir auto-detected from script location
+python analyze_bag.py
+
+# Point at a specific bag file (any path)
+python analyze_bag.py /path/to/hackathon_fast_laps.mcap
+
+# Analyse all 3 bags + cross-bag comparison
+python analyze_bag.py --all
+
+# Use a different reference raceline
+python analyze_bag.py --raceline minimum_curvature
+
+# Explicit data directory (for Docker or non-default layouts)
+python analyze_bag.py --data-dir /data
+# or set the environment variable:
+RACING_DATA_DIR=/data python analyze_bag.py --all
 ```
+
+The data directory must contain:
+- `raceline_hybrid.csv` (or `raceline_minimum_curvature.csv`)
+- `yas_marina_bnd.json`
+- The `.mcap` bag file(s) (when using `--all` or the default)
 
 ### MCAP Reading
 
@@ -991,49 +1014,74 @@ All tunable parameters in one place:
 
 ## Running the System
 
-### 1. Terminal Race Report (no dependencies beyond Python)
+### Prerequisites
 
 ```bash
-cd /home/hamza/hackathon_ws
-python src/racing_analyzer/analyze_bag.py hackathon_fast_laps.mcap
-python src/racing_analyzer/analyze_bag.py --all
-python src/racing_analyzer/analyze_bag.py --raceline minimum_curvature
+pip install -r src/racing_analyzer/requirements.txt
 ```
 
-### 2. Real-Time Browser Dashboard
+> **MCAP files are not in git.** Place `hackathon_wheel_to_wheel.mcap`, `hackathon_fast_laps.mcap`,
+> and `hackathon_good_lap.mcap` in the workspace root (`hackathon_ws/`) or pass their paths explicitly.
+
+### 1. Terminal Race Report
 
 ```bash
-cd /home/hamza/hackathon_ws
-python dashboard_server.py                                   # 5x replay speed
-python dashboard_server.py --bag hackathon_fast_laps.mcap --speed 20
-python dashboard_server.py --speed 1                         # real-time
+cd hackathon_ws/src/racing_analyzer
+
+# Single bag (auto-detects data dir from script location)
+python analyze_bag.py /path/to/hackathon_fast_laps.mcap
+
+# All 3 bags with cross-bag comparison
+python analyze_bag.py --all
+
+# Custom data directory
+python analyze_bag.py --all --data-dir /path/to/data
+
+# Alternative raceline
+python analyze_bag.py --raceline minimum_curvature
 ```
 
-Open **http://localhost:8050** in a browser.
-
-### 3. HTTP API Server
+### 2. HTTP API Server
 
 ```bash
-cd /home/hamza/hackathon_ws/src/racing_analyzer
+cd hackathon_ws/src/racing_analyzer
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Docs: **http://localhost:8000/docs**
 
 ```bash
-# Test health
+# Health check
 curl http://localhost:8000/health
 
-# Analyse corners from raceline only
-curl -X POST http://localhost:8000/analyze-corners \
+# Corner analysis (no trajectory needed)
+curl -X POST http://localhost:8000/api/v1/analyze-corners \
   -H "Content-Type: application/json" \
   -d '{"track_name": "Yas Marina", "raceline": [...]}'
 ```
 
-### 4. ROS 2 Node
+### 3. Docker
 
 ```bash
+cd hackathon_ws/src/racing_analyzer
+docker build -t racing-analyzer .
+docker run -p 8000:8000 racing-analyzer
+```
+
+### 4. Run Tests
+
+```bash
+cd hackathon_ws/src/racing_analyzer
+pytest tests/ -v
+```
+
+### 5. ROS 2 Node (optional)
+
+```bash
+# Requires ROS 2 environment and sd_localization_msgs
 ros2 run racing_analyzer path_publisher
+# or with bag replay:
+ros2 bag play hackathon_wheel_to_wheel.mcap --clock
 ```
 
 ---

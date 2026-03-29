@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/msg/RcStatus01.msg

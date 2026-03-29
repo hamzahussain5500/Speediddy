@@ -3,17 +3,28 @@
 analyze_bag.py  —  Racing Analyzer: mcap bag → terminal race report
 
 Usage:
-    python analyze_bag.py                              # default: wheel_to_wheel bag
-    python analyze_bag.py hackathon_fast_laps.mcap
-    python analyze_bag.py hackathon_good_lap.mcap
-    python analyze_bag.py --all                        # analyse all 3 bags
+    python analyze_bag.py <path/to/file.mcap>
+    python analyze_bag.py --all --data-dir /path/to/data
     python analyze_bag.py --raceline minimum_curvature
+
+Data directory (contains raceline CSVs, yas_marina_bnd.json, and mcap files):
+    Set via --data-dir flag  OR  RACING_DATA_DIR environment variable.
+    Defaults to the workspace root two levels above this script.
+
+Expected files in data directory:
+    raceline_hybrid.csv
+    raceline_minimum_curvature.csv
+    yas_marina_bnd.json
+    hackathon_wheel_to_wheel.mcap   (not in git — download separately)
+    hackathon_fast_laps.mcap        (not in git — download separately)
+    hackathon_good_lap.mcap         (not in git — download separately)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -22,7 +33,8 @@ import numpy as np
 import pandas as pd
 from mcap_ros2.reader import read_ros2_messages
 
-WS_ROOT = Path(__file__).resolve().parents[2]   # hackathon_ws/
+# Default data dir: workspace root (two levels above src/racing_analyzer/)
+_DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.core.geometry import Raceline, arc_length, series_stats
@@ -323,10 +335,29 @@ def main() -> None:
     parser.add_argument(
         "--raceline", choices=["hybrid", "minimum_curvature"], default="hybrid"
     )
+    parser.add_argument(
+        "--data-dir",
+        default=None,
+        help=(
+            "Directory containing raceline CSVs, boundaries JSON, and mcap files. "
+            "Overrides RACING_DATA_DIR env var. "
+            f"Default: {_DEFAULT_DATA_DIR}"
+        ),
+    )
     args = parser.parse_args()
 
-    raceline_csv = WS_ROOT / f"raceline_{args.raceline}.csv"
-    boundaries_json = WS_ROOT / "yas_marina_bnd.json"
+    # Resolve data directory: CLI > env var > default (ws root)
+    data_dir = Path(
+        args.data_dir
+        or os.environ.get("RACING_DATA_DIR", "")
+        or _DEFAULT_DATA_DIR
+    )
+    if not data_dir.is_dir():
+        print(f"ERROR: data directory not found: {data_dir}")
+        sys.exit(1)
+
+    raceline_csv = data_dir / f"raceline_{args.raceline}.csv"
+    boundaries_json = data_dir / "yas_marina_bnd.json"
 
     t_start = time.perf_counter()
 
@@ -344,11 +375,11 @@ def main() -> None:
 
     # Which bags to process
     if args.all:
-        bags = [WS_ROOT / b for b in ALL_BAGS]
+        bags = [data_dir / b for b in ALL_BAGS]
     elif args.mcap:
         bags = [Path(args.mcap)]
     else:
-        bags = [WS_ROOT / "hackathon_wheel_to_wheel.mcap"]
+        bags = [data_dir / "hackathon_wheel_to_wheel.mcap"]
 
     all_lap_results: dict[str, list[dict]] = {}
 

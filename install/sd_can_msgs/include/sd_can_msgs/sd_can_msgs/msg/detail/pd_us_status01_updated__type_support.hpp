@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_generator_cpp/sd_can_msgs/msg/detail/pd_us_status01_updated__type_support.hpp

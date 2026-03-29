@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_generator_cpp/sd_can_msgs/msg/detail/texib6r_tx2__builder.hpp

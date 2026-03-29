@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_localization_msgs/rosidl_generator_py/sd_localization_msgs/_sd_localization_msgs_s.ep.rosidl_typesupport_fastrtps_c.c

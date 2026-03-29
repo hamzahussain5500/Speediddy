@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_generator_cpp/sd_can_msgs/msg/detail/bsu_status01__type_support.hpp

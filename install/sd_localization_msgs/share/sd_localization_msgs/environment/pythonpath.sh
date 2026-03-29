@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_localization_msgs/ament_cmake_environment_hooks/pythonpath.sh

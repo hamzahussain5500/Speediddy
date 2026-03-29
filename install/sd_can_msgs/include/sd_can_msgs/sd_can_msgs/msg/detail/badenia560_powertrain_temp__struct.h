@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_generator_c/sd_can_msgs/msg/detail/badenia560_powertrain_temp__struct.h

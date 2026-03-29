@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/vectornav_msgs/rosidl_typesupport_fastrtps_cpp/vectornav_msgs/msg/detail/time_utc__rosidl_typesupport_fastrtps_cpp.hpp

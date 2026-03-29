@@ -1,8 +1,0 @@
-setup.py
-sd_localization_msgs/__init__.py
-sd_localization_msgs.egg-info/PKG-INFO
-sd_localization_msgs.egg-info/SOURCES.txt
-sd_localization_msgs.egg-info/dependency_links.txt
-sd_localization_msgs.egg-info/top_level.txt
-sd_localization_msgs/msg/__init__.py
-sd_localization_msgs/msg/_state_estimation.py

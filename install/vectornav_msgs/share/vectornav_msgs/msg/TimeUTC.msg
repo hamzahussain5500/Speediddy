@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/src/sd_msgs/vectornav_msgs/msg/TimeUTC.msg

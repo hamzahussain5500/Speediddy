@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_map_msgs/msg/SnState.msg

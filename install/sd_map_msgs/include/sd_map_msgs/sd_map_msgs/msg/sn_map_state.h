@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_map_msgs/rosidl_generator_c/sd_map_msgs/msg/sn_map_state.h

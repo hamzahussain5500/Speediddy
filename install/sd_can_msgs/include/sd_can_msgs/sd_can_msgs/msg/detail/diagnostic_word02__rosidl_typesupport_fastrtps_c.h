@@ -1,1 +1,0 @@
-/home/hamza/hackathon_ws/build/sd_can_msgs/rosidl_typesupport_fastrtps_c/sd_can_msgs/msg/detail/diagnostic_word02__rosidl_typesupport_fastrtps_c.h
