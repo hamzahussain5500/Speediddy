@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.git/
+tests/
+racing_analyzer/
+launch/
+*.egg-info/
+setup.py
+setup.cfg
+package.xml
+resource/
