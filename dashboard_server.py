@@ -6,10 +6,20 @@ Streams MCAP bag data frame-by-frame over WebSocket while emitting
 structured JSON analysis snapshots.  Open http://localhost:8050 in a browser.
 
 Usage:
-    python dashboard_server.py                          # default: wheel_to_wheel bag
+    python dashboard_server.py                          # auto-loads yas_marina default bag
     python dashboard_server.py hackathon_fast_laps.mcap
     python dashboard_server.py --bag hackathon_good_lap.mcap
     python dashboard_server.py --speed 10               # 10x playback speed
+
+Changes vs original:
+    - Fixed quadprog 0.1.7 broken symbol (upgrade to 0.1.13)
+    - Auto-activates Yas Marina track on startup — no manual upload required
+    - Added POST /api/upload-mcap  — upload .mcap bags from the browser
+    - Added POST /api/switch-bag   — switch active bag without CLI restart
+    - Added GET  /api/bags          — list available .mcap bags on the server
+    - Fixed on_event → lifespan (deprecation)
+    - MCAP upload dir created automatically
+    - Bag selector added to Track Setup tab in the UI
 """
 
 from __future__ import annotations
@@ -21,6 +31,7 @@ import os
 import sys
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -37,6 +48,16 @@ SRC_DIR = WS_ROOT / "src" / "racing_analyzer"
 PIPELINE_SCRIPT = WS_ROOT / "minimal_raceline_project" / "run_raceline_pipeline.py"
 TRACK_UPLOAD_DIR = WS_ROOT / "uploads" / "tracks"
 TRACK_JOBS_DIR = WS_ROOT / "uploads" / "track_jobs"
+MCAP_UPLOAD_DIR = WS_ROOT / "uploads" / "mcap"
+
+# Known MCAP search paths — checked in order when listing available bags
+MCAP_SEARCH_DIRS = [
+    WS_ROOT,
+    MCAP_UPLOAD_DIR,
+    Path.home(),
+    Path.home() / "Desktop",
+]
+
 sys.path.insert(0, str(SRC_DIR))
 
 from app.core.geometry import Raceline, series_stats
@@ -232,7 +253,6 @@ def _build_corner_markers(optimum: dict, raceline: Raceline) -> list[dict]:
             label = c.get("turn_id", c.get("label", "corner"))
             category = c.get("category", c.get("corner_type", ""))
         else:
-            # fallback: if corner JSON is minimal, project by apex_s
             apex_s = float(c.get("s_apex", c.get("apex_s", 0.0)))
             apex_idx = int(np.argmin(np.abs(raceline.s - apex_s)))
             x_apex = float(raceline.x[apex_idx])
@@ -279,7 +299,7 @@ def _prepare_live_cache(
     optimum = optimum or _build_default_optimum_from_raceline(raceline)
     corner_segs = _segments_from_optimum(raceline, optimum)
     if not corner_segs:
-      corner_segs = detect_corners(raceline)
+        corner_segs = detect_corners(raceline)
     corner_reference = _corner_reference_from_optimum(optimum)
     corner_markers = _build_corner_markers(optimum, raceline)
 
@@ -290,25 +310,25 @@ def _prepare_live_cache(
         "boundaries_path": str(boundaries_path),
         "source_track_name": source_track_name,
         "speed_multiplier": speed_multiplier,
-      "timestamps": timestamps,
-      "xs": xs,
-      "ys": ys,
-      "yaws": yaws,
-      "vxs": vxs,
-      "idxs": idxs,
-      "distances": distances,
-      "lat_devs": lat_devs,
-      "hdg_errs": hdg_errs,
-      "spd_errs": spd_errs,
-      "ref_s": ref_s,
-      "cum_path_m": cum_path_m,
-      "corner_segs": corner_segs,
-      "corner_reference": corner_reference,
-      "raceline_xy": rl_xy,
-      "left_bnd": lb_xy,
-      "right_bnd": rb_xy,
-      "corner_markers": corner_markers,
-      "optimum": optimum,
+        "timestamps": timestamps,
+        "xs": xs,
+        "ys": ys,
+        "yaws": yaws,
+        "vxs": vxs,
+        "idxs": idxs,
+        "distances": distances,
+        "lat_devs": lat_devs,
+        "hdg_errs": hdg_errs,
+        "spd_errs": spd_errs,
+        "ref_s": ref_s,
+        "cum_path_m": cum_path_m,
+        "corner_segs": corner_segs,
+        "corner_reference": corner_reference,
+        "raceline_xy": rl_xy,
+        "left_bnd": lb_xy,
+        "right_bnd": rb_xy,
+        "corner_markers": corner_markers,
+        "optimum": optimum,
     }
 
 
@@ -425,7 +445,7 @@ def build_snapshot(
     recs_out = [
         {
             "corner_id": r.corner_id + 1,
-        "corner_label": str(corner_ref_map.get(r.corner_id, {}).get("turn_id", r.corner_label)),
+            "corner_label": str(corner_ref_map.get(r.corner_id, {}).get("turn_id", r.corner_label)),
             "issue_type": r.issue_type,
             "priority": r.coaching_priority,
             "confidence": round(r.confidence, 2),
@@ -452,12 +472,12 @@ def build_snapshot(
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "source": {
             "bag": "",   # filled by caller
-        "raceline": live.get("source_track_name", "hybrid"),
+            "raceline": live.get("source_track_name", "hybrid"),
             "optimum_json": "yas_marina_bnd_hybrid_corner_analysis.json",
         },
-      "analytics_perf": {
-        "snapshot_compute_ms": round(compute_ms, 3),
-      },
+        "analytics_perf": {
+            "snapshot_compute_ms": round(compute_ms, 3),
+        },
         "current_state": current,
         "running_metrics": metrics,
         "corners": corners_out,
@@ -470,47 +490,125 @@ def build_snapshot(
     }
 
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _find_mcap_files() -> list[dict]:
+    """Scan known directories for .mcap files and return metadata list."""
+    seen: set[str] = set()
+    result = []
+    for search_dir in MCAP_SEARCH_DIRS:
+        if not search_dir.exists():
+            continue
+        for p in sorted(search_dir.glob("*.mcap")):
+            key = str(p.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            stat = p.stat()
+            result.append({
+                "name": p.name,
+                "path": str(p),
+                "size_mb": round(stat.st_size / 1024 / 1024, 1),
+                "location": str(p.parent),
+            })
+    return result
+
+
+def _auto_activate_yas_marina(bag_path: Path, speed_multiplier: float) -> bool:
+    """
+    Try to activate the Yas Marina track from pre-built local files.
+    Returns True on success, False if files are missing.
+    """
+    hybrid_csv = WS_ROOT / "raceline_hybrid.csv"
+    bnd_json = WS_ROOT / "yas_marina_bnd.json"
+    if not hybrid_csv.exists() or not bnd_json.exists():
+        return False
+
+    try:
+        raceline = load_raceline("hybrid")
+        ref_optimum_path = WS_ROOT / "outputs" / "yas_marina_bnd_hybrid_corner_analysis.json"
+        optimum = load_optimum_json(ref_optimum_path) if ref_optimum_path.exists() else _build_default_optimum_from_raceline(raceline)
+
+        live = _prepare_live_cache(
+            raceline=raceline,
+            bag_path=bag_path,
+            boundaries_path=bnd_json,
+            optimum=optimum,
+            speed_multiplier=speed_multiplier,
+            source_track_name="yas_marina:hybrid",
+        )
+        live["track_ready"] = True
+        live["segmented_curves"] = []
+        _state.update(live)
+        print("  [OK] Yas Marina track auto-activated.")
+        return True
+    except Exception as exc:
+        print(f"  [WARN] Auto-activate failed: {exc}")
+        return False
+
+
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Racing Analyzer Dashboard")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
-# Shared state (loaded once at startup)
 _state: dict = {}
 _jobs: dict[str, dict] = {}
 
 
-@app.on_event("startup")
-async def _startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── startup ────────────────────────────────────────────────────────────────
     global _state
     TRACK_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     TRACK_JOBS_DIR.mkdir(parents=True, exist_ok=True)
+    MCAP_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
     args = _state.get("args", {})
     bag_name = args.get("bag", "hackathon_wheel_to_wheel.mcap")
     bag_override = args.get("bag_override")
     bag_path = Path(bag_override) if bag_override else WS_ROOT / bag_name
     if not bag_path.exists():
-        print(f"\nERROR: {bag_path} not found.")
-        sys.exit(1)
+        # Search in known locations before giving up
+        found = next(
+            (p for d in MCAP_SEARCH_DIRS for p in [d / bag_name] if p.exists()),
+            None
+        )
+        if found:
+            bag_path = found
+        else:
+            print(f"\nERROR: {bag_path} not found. Upload an MCAP via the UI or pass a valid path.")
+            # Don't sys.exit — let the server start so uploads can work
+            bag_path = None
+
+    speed_mult = float(args.get("speed", 5.0))
+    port = int(args.get("port", 8050))
 
     _state.update(
-      {
-        "bag_path": str(bag_path),
-        "bag_name": bag_path.name,
-        "speed_multiplier": float(args.get("speed", 5.0)),
-        "track_ready": False,
-        "source_track_name": None,
-        "raceline_xy": [],
-        "left_bnd": [],
-        "right_bnd": [],
-        "corner_markers": [],
-        "segmented_curves": [],
-        "optimum": {"properties": {}, "corners": [], "recommendations": []},
-      }
+        {
+            "bag_path": str(bag_path) if bag_path else None,
+            "bag_name": bag_path.name if bag_path else "(none)",
+            "speed_multiplier": speed_mult,
+            "track_ready": False,
+            "source_track_name": None,
+            "raceline_xy": [],
+            "left_bnd": [],
+            "right_bnd": [],
+            "corner_markers": [],
+            "segmented_curves": [],
+            "optimum": {"properties": {}, "corners": [], "recommendations": []},
+        }
     )
-    port = int(args.get("port", 8050))
-    print(f"  Dashboard ready — upload track first at http://localhost:{port}")
+
+    if bag_path and bag_path.exists():
+        print("  Loading bag + activating Yas Marina track (this takes ~10s)...")
+        _auto_activate_yas_marina(bag_path, speed_mult)
+    else:
+        print(f"  Dashboard ready — upload an MCAP file and track JSON at http://localhost:{port}")
+
+    yield  # ── server runs ────────────────────────────────────────────────────
+    # (shutdown hook — nothing needed)
+
+
+app = FastAPI(title="Racing Analyzer Dashboard", lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -520,193 +618,289 @@ async def index():
 
 @app.get("/static-data")
 async def static_data():
-  """Return track geometry (sent once at page load)."""
-  if not _state.get("track_ready", False):
+    """Return track geometry (sent once at page load)."""
+    if not _state.get("track_ready", False):
+        return {
+            "setup_required": True,
+            "bag_name": _state.get("bag_name", ""),
+            "active_track": None,
+            "raceline": [],
+            "left_boundary": [],
+            "right_boundary": [],
+            "corner_markers": [],
+            "corner_reference": [],
+            "segmented_curves": [],
+            "track_length_m": 0.0,
+            "optimum_properties": {},
+        }
+
     return {
-      "setup_required": True,
-      "bag_name": _state.get("bag_name", ""),
-      "active_track": None,
-      "raceline": [],
-      "left_boundary": [],
-      "right_boundary": [],
-      "corner_markers": [],
-      "corner_reference": [],
-      "segmented_curves": [],
-      "track_length_m": 0.0,
-      "optimum_properties": {},
+        "setup_required": False,
+        "raceline": _state["raceline_xy"],
+        "left_boundary": _state["left_bnd"],
+        "right_boundary": _state["right_bnd"],
+        "corner_markers": _state["corner_markers"],
+        "corner_reference": _state.get("corner_reference", []),
+        "segmented_curves": _state.get("segmented_curves", []),
+        "track_length_m": round(_state["raceline"].total_length, 2),
+        "bag_name": _state["bag_name"],
+        "active_track": _state.get("source_track_name"),
+        "optimum_properties": _state["optimum"].get("properties", {}),
     }
 
-  return {
-    "setup_required": False,
-    "raceline": _state["raceline_xy"],
-    "left_boundary": _state["left_bnd"],
-    "right_boundary": _state["right_bnd"],
-    "corner_markers": _state["corner_markers"],
-    "corner_reference": _state.get("corner_reference", []),
-    "segmented_curves": _state.get("segmented_curves", []),
-    "track_length_m": round(_state["raceline"].total_length, 2),
-    "bag_name": _state["bag_name"],
-    "active_track": _state.get("source_track_name"),
-    "optimum_properties": _state["optimum"].get("properties", {}),
-  }
 
+# ── MCAP file management ──────────────────────────────────────────────────────
+
+@app.get("/api/bags")
+async def list_bags():
+    """List all .mcap files the server can find."""
+    bags = _find_mcap_files()
+    return {
+        "count": len(bags),
+        "bags": bags,
+        "active_bag": _state.get("bag_name"),
+    }
+
+
+@app.post("/api/upload-mcap")
+async def upload_mcap(file: UploadFile = File(...)):
+    """Upload an .mcap bag file to the server."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing file name")
+    if not file.filename.lower().endswith(".mcap"):
+        raise HTTPException(status_code=400, detail="Only .mcap files are supported")
+
+    MCAP_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    dest = MCAP_UPLOAD_DIR / file.filename
+    content = await file.read()
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    size_mb = round(len(content) / 1024 / 1024, 1)
+    return {
+        "status": "ok",
+        "filename": file.filename,
+        "path": str(dest),
+        "size_mb": size_mb,
+        "message": f"Uploaded {file.filename} ({size_mb} MB). Use /api/switch-bag to activate it.",
+    }
+
+
+@app.post("/api/switch-bag")
+async def switch_bag(body: dict):
+    """
+    Switch the active MCAP bag (re-processes metrics against current track).
+    Body: { "bag_name": "hackathon_good_lap.mcap" }
+          or { "bag_path": "/absolute/path/to/file.mcap" }
+    """
+    if not _state.get("track_ready"):
+        raise HTTPException(status_code=409, detail="No track active. Upload and activate a track first.")
+
+    bag_path_str = body.get("bag_path")
+    bag_name = body.get("bag_name")
+
+    if bag_path_str:
+        bag_path = Path(bag_path_str)
+    elif bag_name:
+        bag_path = next(
+            (d / bag_name for d in MCAP_SEARCH_DIRS if (d / bag_name).exists()),
+            None
+        )
+        if bag_path is None:
+            raise HTTPException(status_code=404, detail=f"Bag '{bag_name}' not found in search paths")
+    else:
+        raise HTTPException(status_code=400, detail="Provide 'bag_name' or 'bag_path'")
+
+    if not bag_path.exists():
+        raise HTTPException(status_code=404, detail=f"Bag file not found: {bag_path}")
+
+    try:
+        raceline = _state["raceline"]
+        boundaries_path = Path(_state["boundaries_path"])
+        optimum = _state["optimum"]
+        speed_mult = float(_state.get("speed_multiplier", 5.0))
+        source_track = _state.get("source_track_name", "yas_marina:hybrid")
+
+        live = _prepare_live_cache(
+            raceline=raceline,
+            bag_path=bag_path,
+            boundaries_path=boundaries_path,
+            optimum=optimum,
+            speed_multiplier=speed_mult,
+            source_track_name=source_track,
+        )
+        live["track_ready"] = True
+        live["segmented_curves"] = _state.get("segmented_curves", [])
+        _state.update(live)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load bag: {exc}")
+
+    return {
+        "status": "ok",
+        "bag_name": bag_path.name,
+        "bag_path": str(bag_path),
+        "frames": len(_state["timestamps"]),
+    }
+
+
+# ── track pipeline ────────────────────────────────────────────────────────────
 
 async def _run_track_pipeline_job(job_id: str) -> None:
-  job = _jobs[job_id]
-  job["status"] = "running"
-  job["started_at"] = datetime.now(timezone.utc).isoformat()
+    job = _jobs[job_id]
+    job["status"] = "running"
+    job["started_at"] = datetime.now(timezone.utc).isoformat()
 
-  input_path = Path(job["input_path"])
-  out_dir = Path(job["output_dir"])
-  out_dir.mkdir(parents=True, exist_ok=True)
+    input_path = Path(job["input_path"])
+    out_dir = Path(job["output_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-  cmd = [
-    sys.executable,
-    str(PIPELINE_SCRIPT),
-    "--track-json",
-    str(input_path),
-    "--output-dir",
-    str(out_dir),
-    "--json-indent",
-    "2",
-  ]
-
-  try:
-    proc = await asyncio.create_subprocess_exec(
-      *cmd,
-      stdout=asyncio.subprocess.PIPE,
-      stderr=asyncio.subprocess.PIPE,
-      cwd=str(WS_ROOT),
-      env=os.environ.copy(),
-    )
-    stdout_b, stderr_b = await proc.communicate()
-    stdout = stdout_b.decode("utf-8", errors="replace")
-    stderr = stderr_b.decode("utf-8", errors="replace")
-
-    if proc.returncode != 0:
-      job["status"] = "failed"
-      job["error"] = f"Pipeline failed with exit code {proc.returncode}"
-      job["stderr_tail"] = "\n".join(stderr.splitlines()[-30:])
-      job["stdout_tail"] = "\n".join(stdout.splitlines()[-30:])
-      job["finished_at"] = datetime.now(timezone.utc).isoformat()
-      return
-
-    hybrid_json = out_dir / "raceline_hybrid.json"
-    bundle_json = out_dir / "trajectories_bundle.json"
-    if not hybrid_json.exists() or not bundle_json.exists():
-      job["status"] = "failed"
-      job["error"] = "Pipeline completed but expected JSON outputs are missing"
-      job["finished_at"] = datetime.now(timezone.utc).isoformat()
-      return
-
-    raceline = load_raceline_from_json_payload(hybrid_json)
-    segs = detect_corners(raceline)
-    segmented = [
-      {
-        "id": seg.id + 1,
-        "label": f"Corner {seg.id + 1}",
-        "type": seg.corner_type,
-        "direction": seg.turn_direction,
-        "start_s": round(float(seg.start_s), 3),
-        "end_s": round(float(seg.end_s), 3),
-        "apex_s": round(float(seg.apex_s), 3),
-        "length_m": round(float(seg.length_m), 3),
-        "max_curvature": round(float(seg.max_curvature), 6),
-      }
-      for seg in segs
+    cmd = [
+        sys.executable,
+        str(PIPELINE_SCRIPT),
+        "--track-json",
+        str(input_path),
+        "--output-dir",
+        str(out_dir),
+        "--json-indent",
+        "2",
     ]
 
-    with open(bundle_json, "r", encoding="utf-8") as f:
-      bundle_payload = json.load(f)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=str(WS_ROOT),
+            env=os.environ.copy(),
+        )
+        stdout_b, stderr_b = await proc.communicate()
+        stdout = stdout_b.decode("utf-8", errors="replace")
+        stderr = stderr_b.decode("utf-8", errors="replace")
 
-    job["status"] = "succeeded"
-    job["result"] = {
-      "optimum_trajectory": {
-        "hybrid_raceline_json": str(hybrid_json),
-        "bundle_json": str(bundle_json),
-        "n_points": int(raceline.n_points),
-        "track_length_m": round(float(raceline.total_length), 3),
-      },
-      "segmented_curves": segmented,
-      "bundle_preview": {
-        "schema_version": bundle_payload.get("schema_version"),
-        "source_track_json": bundle_payload.get("source_track_json"),
-        "settings": bundle_payload.get("settings", {}),
-      },
-    }
-    job["stdout_tail"] = "\n".join(stdout.splitlines()[-20:])
-    job["finished_at"] = datetime.now(timezone.utc).isoformat()
-  except Exception as exc:
-    job["status"] = "failed"
-    job["error"] = str(exc)
-    job["finished_at"] = datetime.now(timezone.utc).isoformat()
+        if proc.returncode != 0:
+            job["status"] = "failed"
+            job["error"] = f"Pipeline failed with exit code {proc.returncode}"
+            job["stderr_tail"] = "\n".join(stderr.splitlines()[-30:])
+            job["stdout_tail"] = "\n".join(stdout.splitlines()[-30:])
+            job["finished_at"] = datetime.now(timezone.utc).isoformat()
+            return
+
+        hybrid_json = out_dir / "raceline_hybrid.json"
+        bundle_json = out_dir / "trajectories_bundle.json"
+        if not hybrid_json.exists() or not bundle_json.exists():
+            job["status"] = "failed"
+            job["error"] = "Pipeline completed but expected JSON outputs are missing"
+            job["finished_at"] = datetime.now(timezone.utc).isoformat()
+            return
+
+        raceline = load_raceline_from_json_payload(hybrid_json)
+        segs = detect_corners(raceline)
+        segmented = [
+            {
+                "id": seg.id + 1,
+                "label": f"Corner {seg.id + 1}",
+                "type": seg.corner_type,
+                "direction": seg.turn_direction,
+                "start_s": round(float(seg.start_s), 3),
+                "end_s": round(float(seg.end_s), 3),
+                "apex_s": round(float(seg.apex_s), 3),
+                "length_m": round(float(seg.length_m), 3),
+                "max_curvature": round(float(seg.max_curvature), 6),
+            }
+            for seg in segs
+        ]
+
+        with open(bundle_json, "r", encoding="utf-8") as f:
+            bundle_payload = json.load(f)
+
+        job["status"] = "succeeded"
+        job["result"] = {
+            "optimum_trajectory": {
+                "hybrid_raceline_json": str(hybrid_json),
+                "bundle_json": str(bundle_json),
+                "n_points": int(raceline.n_points),
+                "track_length_m": round(float(raceline.total_length), 3),
+            },
+            "segmented_curves": segmented,
+            "bundle_preview": {
+                "schema_version": bundle_payload.get("schema_version"),
+                "source_track_json": bundle_payload.get("source_track_json"),
+                "settings": bundle_payload.get("settings", {}),
+            },
+        }
+        job["stdout_tail"] = "\n".join(stdout.splitlines()[-20:])
+        job["finished_at"] = datetime.now(timezone.utc).isoformat()
+    except Exception as exc:
+        job["status"] = "failed"
+        job["error"] = str(exc)
+        job["finished_at"] = datetime.now(timezone.utc).isoformat()
 
 
 @app.post("/api/upload-track")
 async def upload_track_json(file: UploadFile = File(...)):
-  if not file.filename:
-    raise HTTPException(status_code=400, detail="Missing file name")
-  if not file.filename.lower().endswith(".json"):
-    raise HTTPException(status_code=400, detail="Only .json files are supported")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing file name")
+    if not file.filename.lower().endswith(".json"):
+        raise HTTPException(status_code=400, detail="Only .json files are supported")
 
-  content = await file.read()
-  if len(content) > 8 * 1024 * 1024:
-    raise HTTPException(status_code=400, detail="Track JSON must be <= 8 MB")
+    content = await file.read()
+    if len(content) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Track JSON must be <= 8 MB")
 
-  try:
-    payload = json.loads(content.decode("utf-8"))
-  except Exception:
-    raise HTTPException(status_code=400, detail="Invalid JSON file")
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
 
-  b = payload.get("boundaries", {})
-  if not isinstance(b.get("left_border"), list) or not isinstance(b.get("right_border"), list):
-    raise HTTPException(status_code=400, detail="JSON must include boundaries.left_border/right_border arrays")
+    b = payload.get("boundaries", {})
+    if not isinstance(b.get("left_border"), list) or not isinstance(b.get("right_border"), list):
+        raise HTTPException(status_code=400, detail="JSON must include boundaries.left_border/right_border arrays")
 
-  job_id = uuid.uuid4().hex[:12]
-  job_dir = TRACK_JOBS_DIR / job_id
-  input_path = TRACK_UPLOAD_DIR / f"{job_id}_{Path(file.filename).name}"
-  output_dir = job_dir / "outputs"
+    job_id = uuid.uuid4().hex[:12]
+    job_dir = TRACK_JOBS_DIR / job_id
+    input_path = TRACK_UPLOAD_DIR / f"{job_id}_{Path(file.filename).name}"
+    output_dir = job_dir / "outputs"
 
-  TRACK_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-  job_dir.mkdir(parents=True, exist_ok=True)
+    TRACK_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    job_dir.mkdir(parents=True, exist_ok=True)
 
-  with open(input_path, "wb") as f:
-    f.write(content)
+    with open(input_path, "wb") as f:
+        f.write(content)
 
-  _jobs[job_id] = {
-    "job_id": job_id,
-    "status": "queued",
-    "created_at": datetime.now(timezone.utc).isoformat(),
-    "input_filename": file.filename,
-    "input_path": str(input_path),
-    "output_dir": str(output_dir),
-    "error": None,
-    "result": None,
-  }
+    _jobs[job_id] = {
+        "job_id": job_id,
+        "status": "queued",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "input_filename": file.filename,
+        "input_path": str(input_path),
+        "output_dir": str(output_dir),
+        "error": None,
+        "result": None,
+    }
 
-  asyncio.create_task(_run_track_pipeline_job(job_id))
+    asyncio.create_task(_run_track_pipeline_job(job_id))
 
-  return {
-    "job_id": job_id,
-    "status": "queued",
-    "message": "Track uploaded. Raceline pipeline started.",
-    "status_endpoint": f"/api/jobs/{job_id}",
-    "activate_endpoint": f"/api/jobs/{job_id}/activate",
-  }
+    return {
+        "job_id": job_id,
+        "status": "queued",
+        "message": "Track uploaded. Raceline pipeline started.",
+        "status_endpoint": f"/api/jobs/{job_id}",
+        "activate_endpoint": f"/api/jobs/{job_id}/activate",
+    }
 
 
 @app.get("/api/jobs")
 async def list_track_jobs():
-  jobs = sorted(_jobs.values(), key=lambda j: j.get("created_at", ""), reverse=True)
-  return {"count": len(jobs), "jobs": jobs[:20]}
+    jobs = sorted(_jobs.values(), key=lambda j: j.get("created_at", ""), reverse=True)
+    return {"count": len(jobs), "jobs": jobs[:20]}
 
 
 @app.get("/api/jobs/{job_id}")
 async def get_track_job(job_id: str):
-  job = _jobs.get(job_id)
-  if not job:
-    raise HTTPException(status_code=404, detail="Job not found")
-  return job
+    job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
 @app.post("/api/jobs/{job_id}/activate")
@@ -732,9 +926,13 @@ async def activate_track_job(job_id: str):
         else:
             optimum = _build_default_optimum_from_raceline(raceline)
 
+        bag_path = Path(_state.get("bag_path") or "")
+        if not bag_path.exists():
+            raise HTTPException(status_code=409, detail="No MCAP bag loaded. Upload a bag first.")
+
         live = _prepare_live_cache(
             raceline=raceline,
-            bag_path=Path(_state["bag_path"]),
+            bag_path=bag_path,
             boundaries_path=input_json,
             optimum=optimum,
             speed_multiplier=float(_state.get("speed_multiplier", 5.0)),
@@ -745,6 +943,8 @@ async def activate_track_job(job_id: str):
         _state.update(live)
         job["activated"] = True
         job["activated_at"] = datetime.now(timezone.utc).isoformat()
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to activate uploaded track: {exc}")
 
@@ -756,6 +956,8 @@ async def activate_track_job(job_id: str):
         "corner_count": len(_state.get("corner_segs", [])),
     }
 
+
+# ── WebSocket stream ──────────────────────────────────────────────────────────
 
 @app.websocket("/ws/stream")
 async def stream(ws: WebSocket):
@@ -796,9 +998,7 @@ async def stream(ws: WebSocket):
 
             await asyncio.sleep(sleep_dt)
 
-            snap = build_snapshot(
-                frame_idx, _state, optimum
-            )
+            snap = build_snapshot(frame_idx, _state, optimum)
             snap["source"]["bag"] = bag_name
             snap["type"] = "snapshot"
 
@@ -943,6 +1143,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     border-radius: 6px; padding: 8px 10px; font-size: 12px; cursor: pointer;
   }
   .btn.primary { border-color: #f0c040; color: #f0c040; }
+  .btn.danger { border-color: #f44336; color: #f44336; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .builder-msg { margin-top: 8px; color: #9aa0b7; font-size: 12px; }
   .job-card {
@@ -959,12 +1160,27 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   .pill.succeeded { background:#24422f; color:#7de2a8; }
   .pill.failed { background:#4a2024; color:#ff9a9a; }
 
+  /* Bag list */
+  .bag-item {
+    background: #10121a; border: 1px solid #22283d; border-radius: 6px;
+    padding: 8px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .bag-item.active-bag { border-color: #f0c040; }
+  .bag-name { font-weight: bold; color: #e0e0e0; font-size: 12px; }
+  .bag-meta { font-size: 11px; color: #666; }
+
   /* Speed chart */
   #speed-chart { height: 220px; }
   #dev-chart { height: 220px; }
 
   #progress-bar-wrap { height: 4px; background: #1a1a1a; }
   #progress-bar { height: 4px; background: #f0c040; width: 0%; transition: width 0.3s; }
+
+  /* Upload progress */
+  #mcap-upload-progress {
+    display: none; margin-top: 8px; height: 4px; background: #1a1a1a; border-radius: 2px;
+  }
+  #mcap-upload-bar { height: 4px; background: #4caf50; border-radius: 2px; width: 0%; transition: width 0.2s; }
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: #111; }
@@ -977,7 +1193,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   <h1>RACING ANALYZER</h1>
   <span id="status-badge">CONNECTING</span>
   <span id="bag-label">—</span>
-  <span id="active-track-label">track: hybrid</span>
+  <span id="active-track-label">track: loading…</span>
   <span style="margin-left:auto; color:#555; font-size:11px;" id="timestamp-label"></span>
 </div>
 
@@ -1049,21 +1265,42 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       <div id="dev-chart"></div>
     </div>
     <div id="tab-track" class="tab-content active">
+
+      <!-- ── MCAP Bag selector ─────────────────────────────────────────── -->
       <div class="builder-panel">
-        <div class="builder-title">Step 1 — Upload track JSON</div>
+        <div class="builder-title">MCAP Bag — Select or Upload</div>
+        <div id="bags-list"><p class="no-data">Loading bags…</p></div>
+        <div style="margin-top:10px;">
+          <div class="builder-row">
+            <input id="mcap-file" class="builder-input" type="file" accept=".mcap" />
+            <button id="mcap-upload-btn" class="btn primary" onclick="uploadMcap()">Upload MCAP</button>
+          </div>
+          <div id="mcap-upload-progress"><div id="mcap-upload-bar"></div></div>
+          <div class="builder-msg" id="mcap-upload-msg">Upload an .mcap file to the server, then click it to activate.</div>
+        </div>
+      </div>
+
+      <!-- ── Track JSON pipeline ───────────────────────────────────────── -->
+      <div class="builder-panel">
+        <div class="builder-title">Track Boundary JSON (optional — Yas Marina auto-loaded)</div>
         <div class="builder-row">
           <input id="track-file" class="builder-input" type="file" accept=".json,application/json" />
           <button id="track-upload-btn" class="btn primary" onclick="uploadTrackJson()">Run pipeline</button>
         </div>
-        <div class="builder-msg" id="track-upload-msg">Upload a track boundary JSON to generate optimum raceline and segmented curves.</div>
+        <div class="builder-msg" id="track-upload-msg">Upload a custom track boundary JSON to override the active raceline.</div>
       </div>
+
+      <!-- ── Live stream ───────────────────────────────────────────────── -->
       <div class="builder-panel">
-        <div class="builder-title">Step 2 — Start live bag analysis</div>
+        <div class="builder-title">Live Bag Analysis</div>
         <div class="builder-row">
           <button id="live-start-btn" class="btn primary" onclick="startLivePlayback()" disabled>Start live dashboard</button>
+          <button id="live-stop-btn" class="btn danger" onclick="stopLivePlayback()" disabled>Stop</button>
         </div>
-        <div class="builder-msg" id="live-start-msg">Complete Step 1 first. The stream starts only after a track is processed and activated.</div>
+        <div class="builder-msg" id="live-start-msg">Waiting for track to be ready…</div>
       </div>
+
+      <!-- ── Pipeline jobs ─────────────────────────────────────────────── -->
       <div class="builder-panel">
         <div class="builder-title">Track pipeline status</div>
         <div id="jobs-container"><p class="no-data">No jobs yet.</p></div>
@@ -1086,9 +1323,11 @@ let totalFrames = 0;
 let speedHistory = [], devHistory = [], timeHistory = [];
 let chartsInited = false;
 let jobsPollTimer = null;
+let bagsPollTimer = null;
 let trackReady = false;
 let streamStarted = false;
 let allowReconnect = false;
+let activeWs = null;
 const TAB_NAMES = ['recs','corners','charts','track','json'];
 const MAX_HISTORY = 600;
 
@@ -1097,15 +1336,11 @@ function setTrackReady(ready) {
   document.getElementById('live-start-btn').disabled = !trackReady || streamStarted;
   document.getElementById('live-start-msg').textContent = trackReady
     ? 'Track ready. Start live analysis to stream car position and recommendations.'
-    : 'Complete Step 1 first. The stream starts only after a track is processed and activated.';
+    : 'Waiting for track to be ready…';
 
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     const name = TAB_NAMES[i];
-    if (name === 'track') {
-      b.disabled = false;
-      b.style.opacity = '1';
-      return;
-    }
+    if (name === 'track') { b.disabled = false; b.style.opacity = '1'; return; }
     b.disabled = !trackReady;
     b.style.opacity = trackReady ? '1' : '0.45';
   });
@@ -1172,7 +1407,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'charts' && chartsInited) { Plotly.Plots.resize('speed-chart'); Plotly.Plots.resize('dev-chart'); }
-  if (name === 'track') loadJobs();
+  if (name === 'track') { loadJobs(); loadBags(); }
 }
 
 // ── init track map ─────────────────────────────────────────────────────────
@@ -1180,7 +1415,7 @@ async function initMap() {
   const res = await fetch('/static-data');
   const d = await res.json();
 
-  document.getElementById('bag-label').textContent = d.bag_name;
+  document.getElementById('bag-label').textContent = d.bag_name || '—';
   document.getElementById('active-track-label').textContent = 'track: ' + (d.active_track || 'pending upload');
   setTrackReady(!d.setup_required);
 
@@ -1224,7 +1459,7 @@ async function refreshStaticTrack() {
   if (!mapInited) return;
   const res = await fetch('/static-data');
   const d = await res.json();
-  document.getElementById('bag-label').textContent = d.bag_name;
+  document.getElementById('bag-label').textContent = d.bag_name || '—';
   document.getElementById('active-track-label').textContent = 'track: ' + (d.active_track || 'pending upload');
   setTrackReady(!d.setup_required);
 
@@ -1262,14 +1497,8 @@ function updateMap(snap) {
   if (!mapInited) return;
   const traj = snap.trajectory_preview || [];
   const cur = snap.current_state;
-  Plotly.restyle('track-map', {
-    x: [traj.map(p=>p.x)],
-    y: [traj.map(p=>p.y)],
-  }, [3]);
-  Plotly.restyle('track-map', {
-    x: [[cur.x]],
-    y: [[cur.y]],
-  }, [4]);
+  Plotly.restyle('track-map', { x: [traj.map(p=>p.x)], y: [traj.map(p=>p.y)] }, [3]);
+  Plotly.restyle('track-map', { x: [[cur.x]], y: [[cur.y]] }, [4]);
 }
 
 // ── init charts ───────────────────────────────────────────────────────────────
@@ -1382,7 +1611,6 @@ function updateCorners(snap) {
 
 // ── update JSON view ──────────────────────────────────────────────────────────
 function updateJson(snap) {
-  // Show only the structured output (no trajectory preview for readability)
   const out = {
     schema_version: snap.schema_version,
     timestamp_utc: snap.timestamp_utc,
@@ -1397,20 +1625,131 @@ function updateJson(snap) {
   document.getElementById('json-view').textContent = JSON.stringify(out, null, 2);
 }
 
+// ── bag list ──────────────────────────────────────────────────────────────────
+async function loadBags() {
+  try {
+    const r = await fetch('/api/bags');
+    const d = await r.json();
+    renderBags(d.bags || [], d.active_bag);
+  } catch (err) {
+    document.getElementById('bags-list').innerHTML = '<p class="no-data">Failed to load bags.</p>';
+  }
+}
+
+function renderBags(bags, activeBag) {
+  const el = document.getElementById('bags-list');
+  if (!bags || bags.length === 0) {
+    el.innerHTML = '<p class="no-data">No .mcap files found. Upload one above.</p>';
+    return;
+  }
+  el.innerHTML = bags.map(b => {
+    const isActive = b.name === activeBag;
+    return `
+    <div class="bag-item ${isActive ? 'active-bag' : ''}">
+      <div>
+        <div class="bag-name">${b.name} ${isActive ? '✓' : ''}</div>
+        <div class="bag-meta">${b.size_mb} MB · ${b.location}</div>
+      </div>
+      ${!isActive ? `<button class="btn" onclick="switchBag('${b.name}', '${b.path}')">Use</button>` : '<span style="color:#f0c040;font-size:11px">ACTIVE</span>'}
+    </div>`;
+  }).join('');
+}
+
+async function switchBag(bagName, bagPath) {
+  const msgEl = document.getElementById('mcap-upload-msg');
+  msgEl.textContent = `Switching to ${bagName}…`;
+  try {
+    const r = await fetch('/api/switch-bag', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ bag_name: bagName, bag_path: bagPath }),
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      msgEl.textContent = d.detail || 'Switch failed.';
+      return;
+    }
+    msgEl.textContent = `Active bag: ${d.bag_name} (${d.frames} frames)`;
+    await loadBags();
+    await refreshStaticTrack();
+    // Reset stream so user re-starts with new bag
+    streamStarted = false;
+    allowReconnect = false;
+    if (activeWs) { activeWs.close(); activeWs = null; }
+    document.getElementById('live-start-btn').disabled = !trackReady;
+    document.getElementById('live-stop-btn').disabled = true;
+    document.getElementById('live-start-msg').textContent = 'Bag switched. Start live analysis.';
+    document.getElementById('status-badge').textContent = 'READY';
+    document.getElementById('status-badge').className = '';
+    document.getElementById('progress-bar').style.width = '0%';
+    speedHistory = []; devHistory = []; timeHistory = []; window._seHist = [];
+  } catch (err) {
+    msgEl.textContent = 'Switch failed: ' + err;
+  }
+}
+
+async function uploadMcap() {
+  const fileEl = document.getElementById('mcap-file');
+  const msgEl = document.getElementById('mcap-upload-msg');
+  const btn = document.getElementById('mcap-upload-btn');
+  const file = fileEl.files && fileEl.files[0];
+  if (!file) { msgEl.textContent = 'Choose an .mcap file first.'; return; }
+
+  btn.disabled = true;
+  msgEl.textContent = `Uploading ${file.name} (${(file.size/1024/1024).toFixed(0)} MB)…`;
+
+  const progressWrap = document.getElementById('mcap-upload-progress');
+  const progressBar  = document.getElementById('mcap-upload-bar');
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  // Use XHR for upload progress reporting
+  await new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload-mcap');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        progressBar.style.width = Math.round(e.loaded / e.total * 100) + '%';
+      }
+    };
+    xhr.onload = () => {
+      progressBar.style.width = '100%';
+      const d = JSON.parse(xhr.responseText);
+      if (xhr.status === 200) {
+        msgEl.textContent = `Uploaded ${d.filename} (${d.size_mb} MB). Click "Use" to activate it.`;
+      } else {
+        msgEl.textContent = d.detail || 'Upload failed.';
+      }
+      progressWrap.style.display = 'none';
+      btn.disabled = false;
+      fileEl.value = '';
+      loadBags();
+      resolve();
+    };
+    xhr.onerror = () => {
+      msgEl.textContent = 'Upload error (network).';
+      progressWrap.style.display = 'none';
+      btn.disabled = false;
+      resolve();
+    };
+    const fd = new FormData();
+    fd.append('file', file);
+    xhr.send(fd);
+  });
+}
+
 function renderJobs(jobs) {
   const el = document.getElementById('jobs-container');
   if (!jobs || jobs.length === 0) {
     el.innerHTML = '<p class="no-data">No jobs yet.</p>';
     return;
   }
-
   el.innerHTML = jobs.map(j => {
     const status = j.status || 'queued';
     const corners = j.result?.segmented_curves?.length;
     const infoLine = j.result
       ? `Track ${j.result.optimum_trajectory.track_length_m} m • ${corners} curves`
       : (j.error ? `Error: ${j.error}` : 'Processing...');
-
     return `
       <div class="job-card">
         <div class="job-head">
@@ -1441,10 +1780,7 @@ async function uploadTrackJson() {
   const msgEl = document.getElementById('track-upload-msg');
   const btn = document.getElementById('track-upload-btn');
   const file = fileEl.files && fileEl.files[0];
-  if (!file) {
-    msgEl.textContent = 'Please choose a JSON file first.';
-    return;
-  }
+  if (!file) { msgEl.textContent = 'Please choose a JSON file first.'; return; }
 
   btn.disabled = true;
   msgEl.textContent = 'Uploading and starting raceline pipeline...';
@@ -1453,11 +1789,7 @@ async function uploadTrackJson() {
     fd.append('file', file);
     const r = await fetch('/api/upload-track', { method: 'POST', body: fd });
     const d = await r.json();
-    if (!r.ok) {
-      msgEl.textContent = d.detail || 'Upload failed.';
-      return;
-    }
-
+    if (!r.ok) { msgEl.textContent = d.detail || 'Upload failed.'; return; }
     msgEl.textContent = `Job ${d.job_id} started. Waiting for completion...`;
     await pollJob(d.job_id);
   } catch (err) {
@@ -1494,10 +1826,7 @@ async function activateJob(jobId) {
   try {
     const r = await fetch('/api/jobs/' + jobId + '/activate', { method: 'POST' });
     const d = await r.json();
-    if (!r.ok) {
-      msgEl.textContent = d.detail || 'Activation failed.';
-      return;
-    }
+    if (!r.ok) { msgEl.textContent = d.detail || 'Activation failed.'; return; }
     msgEl.textContent = `Track ready: ${d.active_track} (${d.corner_count} curves). You can now start live analysis.`;
     await refreshStaticTrack();
     loadJobs();
@@ -1505,6 +1834,19 @@ async function activateJob(jobId) {
   } catch (err) {
     msgEl.textContent = 'Activation failed: ' + err;
   }
+}
+
+function stopLivePlayback() {
+  allowReconnect = false;
+  streamStarted = false;
+  if (activeWs) { try { activeWs.close(); } catch(e){} activeWs = null; }
+  document.getElementById('status-badge').textContent = 'STOPPED';
+  document.getElementById('status-badge').className = '';
+  document.getElementById('live-start-btn').disabled = !trackReady;
+  document.getElementById('live-stop-btn').disabled = true;
+  document.getElementById('live-start-msg').textContent = 'Stream stopped. Click Start to replay.';
+  speedHistory = []; devHistory = []; timeHistory = []; window._seHist = [];
+  document.getElementById('progress-bar').style.width = '0%';
 }
 
 function startLivePlayback() {
@@ -1516,6 +1858,7 @@ function startLivePlayback() {
   streamStarted = true;
   allowReconnect = true;
   document.getElementById('live-start-btn').disabled = true;
+  document.getElementById('live-stop-btn').disabled = false;
   document.getElementById('live-start-msg').textContent = 'Live stream running...';
   switchTab('recs');
   connect();
@@ -1527,6 +1870,7 @@ function connect() {
   badge.textContent = 'CONNECTING'; badge.className = '';
 
   const ws = new WebSocket('ws://' + location.host + '/ws/stream');
+  activeWs = ws;
 
   ws.onopen = () => {
     badge.textContent = 'LIVE'; badge.className = 'live';
@@ -1547,6 +1891,8 @@ function connect() {
       if ((msg.message || '').toLowerCase().includes('track setup required')) {
         allowReconnect = false;
         streamStarted = false;
+        document.getElementById('live-start-btn').disabled = !trackReady;
+        document.getElementById('live-stop-btn').disabled = true;
         setTrackReady(false);
         switchTab('track');
       }
@@ -1568,13 +1914,18 @@ function connect() {
       if (msg.type === 'final') {
         badge.textContent = 'DONE'; badge.className = 'done';
         document.getElementById('progress-bar').style.width = '100%';
+        document.getElementById('live-start-btn').disabled = false;
+        document.getElementById('live-stop-btn').disabled = true;
+        streamStarted = false;
+        allowReconnect = false;
+        document.getElementById('live-start-msg').textContent = 'Playback complete. Click Start to replay.';
       }
     }
   };
 
   ws.onclose = () => {
     if (badge.className !== 'done' && allowReconnect) {
-      badge.textContent = 'DISCONNECTED'; badge.className = '';
+      badge.textContent = 'RECONNECTING'; badge.className = '';
       setTimeout(connect, 3000);
     }
   };
@@ -1583,9 +1934,17 @@ function connect() {
 // ── boot ──────────────────────────────────────────────────────────────────────
 initMap().then(() => {
   loadJobs();
+  loadBags();
   if (jobsPollTimer) clearInterval(jobsPollTimer);
   jobsPollTimer = setInterval(loadJobs, 5000);
+  if (bagsPollTimer) clearInterval(bagsPollTimer);
+  bagsPollTimer = setInterval(loadBags, 10000);
   switchTab('track');
+
+  // If track is already ready on load (auto-activated), enable tabs
+  if (trackReady) {
+    setTrackReady(true);
+  }
 });
 </script>
 </body>
@@ -1598,7 +1957,7 @@ initMap().then(() => {
 def main():
     parser = argparse.ArgumentParser(description="Racing Analyzer — Real-Time Dashboard")
     parser.add_argument("--bag", default="hackathon_wheel_to_wheel.mcap",
-                        help="MCAP bag filename (relative to workspace root)")
+                        help="MCAP bag filename (relative to workspace root or absolute path)")
     parser.add_argument("--raceline", choices=["hybrid", "minimum_curvature"], default="hybrid")
     parser.add_argument("--speed", type=float, default=5.0,
                         help="Playback speed multiplier (default 5x)")
@@ -1610,7 +1969,6 @@ def main():
     args = parser.parse_args()
 
     bag = args.mcap_pos or args.bag
-    # If it's an absolute path just use the filename for lookup in WS_ROOT
     bag_path = Path(bag)
     if not bag_path.is_absolute():
         bag_path = WS_ROOT / bag
@@ -1619,9 +1977,8 @@ def main():
         "bag": bag_path.name if bag_path.parent == WS_ROOT else str(bag_path),
         "raceline": args.raceline,
         "speed": args.speed,
-      "port": args.port,
+        "port": args.port,
     }
-    # Patch startup to use absolute path if provided
     if bag_path.parent != WS_ROOT:
         _state["args"]["bag_override"] = str(bag_path)
 
